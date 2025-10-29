@@ -47,7 +47,7 @@ export function EmployeeFormDialog({
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to save employee');
+      throw new Error(error.error || `Failed to ${isEditMode ? 'update' : 'create'} employee`);
     }
 
     onOpenChange(false);

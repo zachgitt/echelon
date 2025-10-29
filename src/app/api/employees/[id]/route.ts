@@ -94,9 +94,18 @@ export async function PUT(
     console.error('Error updating employee:', error);
 
     // Handle unique constraint violations
-    if (error.code === '23505') {
+    // Drizzle wraps the Postgres error in error.cause
+    const pgError = error.cause || error;
+    if (pgError.code === '23505') {
+      // Check which constraint was violated
+      if (pgError.constraint_name === 'employees_email_unique') {
+        return NextResponse.json(
+          { error: 'An employee with this email address already exists. Please use a different email.' },
+          { status: 409 }
+        );
+      }
       return NextResponse.json(
-        { error: 'An employee with this email already exists' },
+        { error: 'An employee with this information already exists' },
         { status: 409 }
       );
     }

@@ -238,7 +238,7 @@ export function EmployeeForm({
               <SelectItem value="none">No manager</SelectItem>
               {managers.map((manager) => (
                 <SelectItem key={manager.id} value={manager.id}>
-                  {manager.name} - {manager.title}
+                  {manager.name}
                 </SelectItem>
               ))}
             </SelectContent>
