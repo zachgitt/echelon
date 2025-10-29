@@ -14,31 +14,57 @@ npm install
 
 2. Run `Docker Desktop`
 
-3. Start local Supabase:
+3. Configure environment variables:
+
+Copy the `.env.example` into a `.env.local` file in the project root
+
+4. Start local Supabase:
 
 ```bash
-supabase start
+npm run supabase:start
 ```
 
 This will start local PostgreSQL and Supabase services. Keep this running while developing.
 
-4. Run the development server:
+5. Run database migrations:
+
+```bash
+npm run db:migrate
+```
+
+This will create the initial database tables (e.g., organizations) in your local Supabase database.
+
+6. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) with your browser
+7. Open [http://localhost:3000](http://localhost:3000) with your browser.
 
 ## Stopping Services
 
 When done developing:
 
 ```bash
-supabase stop
+npm run supabase:stop
 ```
 
-Note: Supabase runs independently from Next.js, so you can restart `npm run dev` without restarting Supabase. 
+Note: Supabase runs independently from Next.js, so you can restart `npm run dev` without restarting Supabase.
+
+## Database
+
+### Drizzle ORM Commands
+
+- `npm run db:generate` - Generate migration files from schema changes
+- `npm run db:migrate` - Apply migrations to database
+- `npm run db:studio` - Open Drizzle Studio (database browser)
+
+### Supabase Commands
+
+- `npm run supabase:start` - Start local Supabase
+- `npm run supabase:stop` - Stop local Supabase
+- `npm run supabase:status` - Check Supabase status
 
 ## NextJS
 
