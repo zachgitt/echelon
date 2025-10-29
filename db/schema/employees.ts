@@ -11,9 +11,9 @@ export const employeeStatusEnum = pgEnum('employee_status', [
 ]);
 
 export const employees = pgTable('employees', {
-  // Connection to Supabase Auth - id is the same as auth.users.id (1:1 relationship)
-  // Foreign key constraint will be added in the migration SQL
-  id: uuid('id').primaryKey(),
+  // Auto-generated UUID - employees can exist independently of auth users
+  // Optional: Can be linked to auth.users.id if the employee has a user account
+  id: uuid('id').primaryKey().defaultRandom(),
 
   // Employee attributes
   name: text('name').notNull(),
@@ -29,9 +29,8 @@ export const employees = pgTable('employees', {
     onDelete: 'set null'
   }),
 
-  // Email from Supabase Auth - we'll store it here for convenience
-  // Note: This should be synced with auth.users.email
-  email: text('email').notNull(),
+  // Email address
+  email: text('email').notNull().unique(),
 
   hireDate: timestamp('hire_date').notNull(),
   salary: numeric('salary', { precision: 12, scale: 2 }),

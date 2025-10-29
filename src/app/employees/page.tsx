@@ -13,7 +13,7 @@ import type {
 } from '@/types/employee';
 
 // TODO: Get organization ID from auth context or user session
-const MOCK_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000000';
+const MOCK_ORGANIZATION_ID = '6d35c52f-678e-42b7-a66d-6201cd8a8272';
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<EmployeeWithRelations[]>([]);

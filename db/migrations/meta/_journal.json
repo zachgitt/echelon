@@ -15,6 +15,13 @@
       "when": 1761763576661,
       "tag": "0001_woozy_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761777755012,
+      "tag": "0002_wild_starjammers",
+      "breakpoints": true
     }
   ]
 }
