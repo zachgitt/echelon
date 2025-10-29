@@ -1,3 +1,9 @@
+## Prerequisites
+- Node.js (v18 or higher recommended)
+- npm
+- Docker Desktop
+- Supabase CLI
+
 ## Quick Start
 
 1. Install dependencies:
@@ -6,13 +12,33 @@
 npm install
 ```
 
-2. Run the development server:
+2. Run `Docker Desktop`
+
+3. Start local Supabase:
+
+```bash
+supabase start
+```
+
+This will start local PostgreSQL and Supabase services. Keep this running while developing.
+
+4. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) with your browser 
+5. Open [http://localhost:3000](http://localhost:3000) with your browser
+
+## Stopping Services
+
+When done developing:
+
+```bash
+supabase stop
+```
+
+Note: Supabase runs independently from Next.js, so you can restart `npm run dev` without restarting Supabase. 
 
 ## NextJS
 
