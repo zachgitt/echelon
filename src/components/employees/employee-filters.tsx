@@ -21,15 +21,15 @@ interface Department {
 interface EmployeeFiltersProps {
   onFilterChange: (filters: {
     search: string;
-    status: EmployeeStatus[];
-    departmentId: string[];
+    status: EmployeeStatus | null;
+    departmentId: string | null;
   }) => void;
 }
 
 export function EmployeeFilters({ onFilterChange }: EmployeeFiltersProps) {
   const [search, setSearch] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus[]>([]);
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
 
   // Fetch departments for filter
@@ -46,46 +46,37 @@ export function EmployeeFilters({ onFilterChange }: EmployeeFiltersProps) {
       onFilterChange({
         search,
         status: selectedStatus,
-        departmentId: selectedDepartments,
+        departmentId: selectedDepartment,
       });
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, selectedStatus, selectedDepartments, onFilterChange]);
+  }, [search, selectedStatus, selectedDepartment, onFilterChange]);
 
   const handleStatusChange = (value: string) => {
     if (value === 'all') {
-      setSelectedStatus([]);
+      setSelectedStatus(null);
     } else {
-      const status = value as EmployeeStatus;
-      setSelectedStatus((prev) =>
-        prev.includes(status)
-          ? prev.filter((s) => s !== status)
-          : [...prev, status]
-      );
+      setSelectedStatus(value as EmployeeStatus);
     }
   };
 
   const handleDepartmentChange = (value: string) => {
     if (value === 'all') {
-      setSelectedDepartments([]);
+      setSelectedDepartment(null);
     } else {
-      setSelectedDepartments((prev) =>
-        prev.includes(value)
-          ? prev.filter((d) => d !== value)
-          : [...prev, value]
-      );
+      setSelectedDepartment(value);
     }
   };
 
   const clearFilters = () => {
     setSearch('');
-    setSelectedStatus([]);
-    setSelectedDepartments([]);
+    setSelectedStatus(null);
+    setSelectedDepartment(null);
   };
 
   const hasActiveFilters =
-    search || selectedStatus.length > 0 || selectedDepartments.length > 0;
+    search || selectedStatus !== null || selectedDepartment !== null;
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -101,15 +92,12 @@ export function EmployeeFilters({ onFilterChange }: EmployeeFiltersProps) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Select onValueChange={handleStatusChange}>
+        <Select
+          value={selectedStatus || 'all'}
+          onValueChange={handleStatusChange}
+        >
           <SelectTrigger className="w-[180px]">
-            <SelectValue
-              placeholder={
-                selectedStatus.length > 0
-                  ? `Status (${selectedStatus.length})`
-                  : 'All Statuses'
-              }
-            />
+            <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
@@ -120,15 +108,12 @@ export function EmployeeFilters({ onFilterChange }: EmployeeFiltersProps) {
           </SelectContent>
         </Select>
 
-        <Select onValueChange={handleDepartmentChange}>
+        <Select
+          value={selectedDepartment || 'all'}
+          onValueChange={handleDepartmentChange}
+        >
           <SelectTrigger className="w-[180px]">
-            <SelectValue
-              placeholder={
-                selectedDepartments.length > 0
-                  ? `Dept (${selectedDepartments.length})`
-                  : 'All Departments'
-              }
-            />
+            <SelectValue placeholder="All Departments" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>

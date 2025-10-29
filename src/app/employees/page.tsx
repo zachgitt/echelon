@@ -25,8 +25,8 @@ export default function EmployeesPage() {
   });
   const [filters, setFilters] = useState({
     search: '',
-    status: [] as EmployeeStatus[],
-    departmentId: [] as string[],
+    status: null as EmployeeStatus | null,
+    departmentId: null as string | null,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,13 +45,13 @@ export default function EmployeesPage() {
         params.append('search', filters.search);
       }
 
-      filters.status.forEach((status) => {
-        params.append('status', status);
-      });
+      if (filters.status) {
+        params.append('status', filters.status);
+      }
 
-      filters.departmentId.forEach((id) => {
-        params.append('departmentId', id);
-      });
+      if (filters.departmentId) {
+        params.append('departmentId', filters.departmentId);
+      }
 
       const response = await fetch(`/api/employees?${params.toString()}`);
 
@@ -67,7 +67,7 @@ export default function EmployeesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.page, filters.search, JSON.stringify(filters.status), JSON.stringify(filters.departmentId)]);
+  }, [pagination.page, filters.search, filters.status, filters.departmentId]);
 
   useEffect(() => {
     fetchEmployees();
@@ -75,8 +75,8 @@ export default function EmployeesPage() {
 
   const handleFilterChange = (newFilters: {
     search: string;
-    status: EmployeeStatus[];
-    departmentId: string[];
+    status: EmployeeStatus | null;
+    departmentId: string | null;
   }) => {
     setFilters(newFilters);
     setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 on filter change
