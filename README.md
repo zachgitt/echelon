@@ -16,7 +16,7 @@ npm install
 
 3. Configure environment variables:
 
-Copy the `.env.example` into a `.env.local` file in the project root
+Copy the `.env.example` into a `.env` file in the project root
 
 4. Start local Supabase:
 
