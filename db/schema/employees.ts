@@ -1,0 +1,49 @@
+import { pgTable, uuid, text, timestamp, numeric, pgEnum } from 'drizzle-orm/pg-core';
+import { organizations } from './organizations';
+import { departments } from './departments';
+
+// Employee status enum
+export const employeeStatusEnum = pgEnum('employee_status', [
+  'active',
+  'inactive',
+  'on_leave',
+  'terminated'
+]);
+
+export const employees = pgTable('employees', {
+  // Connection to Supabase Auth - id is the same as auth.users.id (1:1 relationship)
+  // Foreign key constraint will be added in the migration SQL
+  id: uuid('id').primaryKey(),
+
+  // Employee attributes
+  name: text('name').notNull(),
+  title: text('title').notNull(),
+
+  // Reference to departments table
+  departmentId: uuid('department_id')
+    .notNull()
+    .references(() => departments.id, { onDelete: 'restrict' }),
+
+  // Self-referential manager relationship (nullable for employees without managers)
+  managerId: uuid('manager_id').references((): any => employees.id, {
+    onDelete: 'set null'
+  }),
+
+  // Email from Supabase Auth - we'll store it here for convenience
+  // Note: This should be synced with auth.users.email
+  email: text('email').notNull(),
+
+  hireDate: timestamp('hire_date').notNull(),
+  salary: numeric('salary', { precision: 12, scale: 2 }),
+
+  // Status enum
+  status: employeeStatusEnum('status').notNull().default('active'),
+
+  // Link to organization
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
