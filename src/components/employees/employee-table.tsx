@@ -10,6 +10,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EmployeeStatusBadge } from './employee-status-badge';
 import { Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
@@ -38,16 +48,26 @@ export function EmployeeTable({
   isLoading = false,
 }: EmployeeTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
 
-  const handleDelete = async (employeeId: string) => {
-    if (confirm('Are you sure you want to terminate this employee?')) {
-      setDeletingId(employeeId);
-      try {
-        await onDelete(employeeId);
-      } finally {
-        setDeletingId(null);
-      }
+  const handleDeleteClick = (employeeId: string) => {
+    setEmployeeToDelete(employeeId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!employeeToDelete) return;
+
+    setDeletingId(employeeToDelete);
+    try {
+      await onDelete(employeeToDelete);
+    } finally {
+      setDeletingId(null);
+      setEmployeeToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setEmployeeToDelete(null);
   };
 
   if (isLoading) {
@@ -121,7 +141,7 @@ export function EmployeeTable({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(employee.id)}
+                      onClick={() => handleDeleteClick(employee.id)}
                       disabled={
                         deletingId !== null || employee.status === 'terminated'
                       }
@@ -171,6 +191,27 @@ export function EmployeeTable({
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={employeeToDelete !== null} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terminate Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to terminate this employee? This action will
+              mark the employee as terminated in the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Terminate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
