@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { OrgChartNode } from './org-chart-node';
 import { EmployeeDetailsDialog } from './employee-details-dialog';
 import type { OrgChartEmployee } from '@/types/org-chart';
@@ -42,6 +42,10 @@ export function OrgChart() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedEmployee, setSelectedEmployee] = useState<OrgChartEmployee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Refs for tracking node positions and transform state
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Fetch employees from API
   useEffect(() => {
@@ -87,8 +91,50 @@ export function OrgChart() {
     fetchEmployees();
   }, []);
 
-  // Handle node expand/collapse
-  const handleToggleExpand = (employeeId: string) => {
+  // Handle node expand/collapse with centering
+  const handleToggleExpand = useCallback((employeeId: string) => {
+    const nodeElement = nodeRefs.current.get(employeeId);
+    if (!nodeElement || !transformRef.current) {
+      // Fallback: just toggle without centering
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        if (next.has(employeeId)) {
+          next.delete(employeeId);
+        } else {
+          next.add(employeeId);
+        }
+        return next;
+      });
+      return;
+    }
+
+    const transformState = transformRef.current.instance?.transformState;
+
+    // If we can't access transform state, just toggle without animation
+    if (!transformState) {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        if (next.has(employeeId)) {
+          next.delete(employeeId);
+        } else {
+          next.add(employeeId);
+        }
+        return next;
+      });
+      return;
+    }
+
+    // Get the node's current position in viewport coordinates BEFORE expansion
+    const rectBefore = nodeElement.getBoundingClientRect();
+    const beforeX = rectBefore.left + rectBefore.width / 2;
+    const beforeY = rectBefore.top + rectBefore.height / 2;
+
+    // Store current transform values
+    const currentX = transformState.positionX;
+    const currentY = transformState.positionY;
+    const currentScale = transformState.scale;
+
+    // Toggle the expansion state
     setExpandedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(employeeId)) {
@@ -98,7 +144,36 @@ export function OrgChart() {
       }
       return next;
     });
-  };
+
+    // After state update, adjust the viewport to maintain node position
+    // We use multiple requestAnimationFrame calls to ensure layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const nodeElementAfter = nodeRefs.current.get(employeeId);
+          if (!nodeElementAfter || !transformRef.current) return;
+
+          // Get the node's position AFTER the expansion
+          const rectAfter = nodeElementAfter.getBoundingClientRect();
+          const afterX = rectAfter.left + rectAfter.width / 2;
+          const afterY = rectAfter.top + rectAfter.height / 2;
+
+          // Calculate how much the node shifted due to layout change
+          const shiftX = afterX - beforeX;
+          const shiftY = afterY - beforeY;
+
+          // Compensate for the shift by adjusting the transform with a quick animation
+          // A short animation (200ms) makes the correction feel smoother than instant
+          transformRef.current.setTransform(
+            currentX - shiftX,
+            currentY - shiftY,
+            currentScale,
+            200 // short animation to smooth the correction
+          );
+        });
+      });
+    });
+  }, []);
 
   // Handle viewing employee details
   const handleViewDetails = (employee: OrgChartEmployee) => {
@@ -114,7 +189,16 @@ export function OrgChart() {
     const departmentColor = employee.departmentId ? getDepartmentColor(employee.departmentId) : undefined;
 
     const nodeLabel = (
-      <div className={shouldShowChildren ? '' : 'leaf-node'}>
+      <div
+        className={shouldShowChildren ? '' : 'leaf-node'}
+        ref={(el) => {
+          if (el) {
+            nodeRefs.current.set(employee.id, el);
+          } else {
+            nodeRefs.current.delete(employee.id);
+          }
+        }}
+      >
         <OrgChartNode
           employee={employee}
           onViewDetails={handleViewDetails}
@@ -175,6 +259,7 @@ export function OrgChart() {
   return (
     <>
       <TransformWrapper
+        ref={transformRef}
         initialScale={0.8}
         initialPositionX={200}
         initialPositionY={100}
@@ -192,7 +277,9 @@ export function OrgChart() {
         }}
         zoomAnimation={{ animationType: 'easeOut', animationTime: 200 }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform }) => {
+          // Store the ref for use in handleToggleExpand
+          return (
           <>
             {/* Zoom Controls */}
             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
@@ -248,7 +335,8 @@ export function OrgChart() {
               </div>
             </TransformComponent>
           </>
-        )}
+          );
+        }}
       </TransformWrapper>
 
       {/* Employee Details Dialog */}
