@@ -106,7 +106,7 @@ export function OrgChart() {
 
   // Recursive function to render tree nodes
   const renderTreeNode = (employee: OrgChartEmployee): React.ReactNode => {
-    const hasChildren = employee.directReports && employee.directReports.length > 0;
+    const hasChildren = Boolean(employee.directReports && employee.directReports.length > 0);
     const isExpanded = expandedNodes.has(employee.id);
     const shouldShowChildren = hasChildren && isExpanded;
     const departmentColor = employee.departmentId ? getDepartmentColor(employee.departmentId) : undefined;

@@ -1,4 +1,22 @@
-import { OrgChart } from '@/components/org-chart/org-chart';
+'use client';
+
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+const OrgChart = dynamic(
+  () => import('@/components/org-chart/org-chart').then((mod) => ({ default: mod.OrgChart })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading organizational chart...</span>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export default function OrgChartPage() {
   return (
