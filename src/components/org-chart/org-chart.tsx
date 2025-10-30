@@ -42,6 +42,7 @@ interface OrgChartProps {
 
 export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
   const [employees, setEmployees] = useState<OrgChartEmployee[]>([]);
+  const [organizationName, setOrganizationName] = useState<string>('Organization');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -69,10 +70,11 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
         }
 
         const data = await response.json();
-        setEmployees(data);
+        setOrganizationName(data.organizationName || 'Organization');
+        setEmployees(data.employees);
 
         // Build grouped tree to set initial expanded state
-        const tree = buildGroupedEmployeeTree(data);
+        const tree = buildGroupedEmployeeTree(data.employees);
         const initialExpanded = new Set<string>();
 
         // Auto-expand all department nodes and their top-level employees
@@ -404,7 +406,7 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
                     lineWidth="2px"
                     lineColor="#cbd5e1"
                     lineBorderRadius="10px"
-                    label={<div className="text-center text-lg font-semibold text-muted-foreground mb-8">Organization</div>}
+                    label={<div className="text-center text-lg font-semibold text-muted-foreground mb-8">{organizationName}</div>}
                   >
                     {tree.map((node) => renderTreeNode(node))}
                   </Tree>

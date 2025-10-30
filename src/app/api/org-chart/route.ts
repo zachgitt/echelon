@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { employees, departments } from '../../../../db/schema';
+import { employees, departments, organizations } from '../../../../db/schema';
 import { eq, asc } from 'drizzle-orm';
 
 export async function GET() {
@@ -26,7 +26,33 @@ export async function GET() {
       .where(eq(employees.status, 'active'))
       .orderBy(asc(employees.name));
 
-    return NextResponse.json(results);
+    // Fetch organization name (assuming all employees belong to the same organization)
+    // We get the organization from the first employee's organizationId
+    let organizationName = 'Organization';
+    if (results.length > 0) {
+      const firstEmployeeOrgId = await db
+        .select({ organizationId: employees.organizationId })
+        .from(employees)
+        .where(eq(employees.id, results[0].id))
+        .limit(1);
+
+      if (firstEmployeeOrgId.length > 0) {
+        const org = await db
+          .select({ name: organizations.name })
+          .from(organizations)
+          .where(eq(organizations.id, firstEmployeeOrgId[0].organizationId))
+          .limit(1);
+
+        if (org.length > 0) {
+          organizationName = org[0].name;
+        }
+      }
+    }
+
+    return NextResponse.json({
+      organizationName,
+      employees: results,
+    });
   } catch (error) {
     console.error('Error fetching org chart data:', error);
     return NextResponse.json(
