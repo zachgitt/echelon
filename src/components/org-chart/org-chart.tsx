@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { OrgChartNode } from './org-chart-node';
 import { EmployeeDetailsDialog } from './employee-details-dialog';
 import type { OrgChartEmployee } from '@/types/org-chart';
 import { buildEmployeeTree } from '@/lib/org-chart/tree-builder';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Helper to get department color based on department ID
 function getDepartmentColor(departmentId: string): string {
@@ -171,18 +173,82 @@ export function OrgChart() {
 
   return (
     <>
-      <div className="w-full h-full overflow-auto p-8">
-        <div className="flex justify-center">
-          <Tree
-            lineWidth="2px"
-            lineColor="#cbd5e1"
-            lineBorderRadius="10px"
-            label={<div className="text-center text-sm text-muted-foreground mb-8">Organization</div>}
-          >
-            {tree.map((rootEmployee) => renderTreeNode(rootEmployee))}
-          </Tree>
-        </div>
-      </div>
+      <TransformWrapper
+        initialScale={0.8}
+        initialPositionX={200}
+        initialPositionY={100}
+        minScale={0.3}
+        maxScale={3}
+        centerOnInit={true}
+        centerZoomedOut={false}
+        disablePadding={false}
+        limitToBounds={false}
+        wheel={{ step: 0.2 }}
+        doubleClick={{ disabled: false, mode: 'zoomIn', step: 0.5 }}
+        panning={{
+          velocityDisabled: false,
+          excluded: ['input', 'textarea', 'select', 'button', 'a']
+        }}
+        zoomAnimation={{ animationType: 'easeOut', animationTime: 200 }}
+      >
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            {/* Zoom Controls */}
+            <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+              <Button
+                onClick={() => zoomIn()}
+                size="icon"
+                variant="outline"
+                className="bg-background shadow-md"
+                title="Zoom In"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => zoomOut()}
+                size="icon"
+                variant="outline"
+                className="bg-background shadow-md"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => resetTransform()}
+                size="icon"
+                variant="outline"
+                className="bg-background shadow-md"
+                title="Reset View"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Pan/Zoom Canvas */}
+            <TransformComponent
+              wrapperClass="w-full h-full"
+              wrapperStyle={{
+                width: '100%',
+                height: '100%',
+                cursor: 'grab'
+              }}
+            >
+              <div className="p-8">
+                <div className="inline-block">
+                  <Tree
+                    lineWidth="2px"
+                    lineColor="#cbd5e1"
+                    lineBorderRadius="10px"
+                    label={<div className="text-center text-sm text-muted-foreground mb-8">Organization</div>}
+                  >
+                    {tree.map((rootEmployee) => renderTreeNode(rootEmployee))}
+                  </Tree>
+                </div>
+              </div>
+            </TransformComponent>
+          </>
+        )}
+      </TransformWrapper>
 
       {/* Employee Details Dialog */}
       <EmployeeDetailsDialog

@@ -20,7 +20,7 @@ const OrgChart = dynamic(
 
 export default function OrgChartPage() {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col -m-4 h-[calc(100vh-4rem)]">
       {/* Page Header */}
       <div className="border-b bg-background px-6 py-4">
         <h1 className="text-2xl font-semibold tracking-tight">Organizational Chart</h1>
@@ -29,8 +29,8 @@ export default function OrgChartPage() {
         </p>
       </div>
 
-      {/* Chart Container */}
-      <div className="flex-1 overflow-hidden">
+      {/* Chart Container - No scrollbars, pan/zoom interface */}
+      <div className="flex-1 relative overflow-hidden">
         <OrgChart />
       </div>
     </div>
