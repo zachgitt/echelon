@@ -3,6 +3,7 @@ import { getEmployees } from '@/lib/employees/queries';
 import { db } from '@/lib/db';
 import { employees } from '../../../../db/schema';
 import type { EmployeeFilters, EmployeeFormData } from '@/types/employee';
+import { createAuditLog } from '@/lib/audit/service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +71,24 @@ export async function POST(request: NextRequest) {
         organizationId: body.organizationId,
       })
       .returning();
+
+    // Create audit log for employee creation
+    await createAuditLog({
+      entityType: 'employee',
+      entityId: newEmployee.id,
+      action: 'created',
+      organizationId: body.organizationId,
+      newValues: {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        title: newEmployee.title,
+        departmentId: newEmployee.departmentId,
+        managerId: newEmployee.managerId,
+        hireDate: newEmployee.hireDate,
+        salary: newEmployee.salary,
+        status: newEmployee.status,
+      },
+    });
 
     return NextResponse.json(newEmployee, { status: 201 });
   } catch (error: any) {

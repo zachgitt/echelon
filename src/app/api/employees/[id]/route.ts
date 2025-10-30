@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { employees } from '../../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import type { EmployeeFormData } from '@/types/employee';
+import { createAuditLog, getChangedFields } from '@/lib/audit/service';
 
 export async function GET(
   request: NextRequest,
@@ -72,22 +73,43 @@ export async function PUT(
       );
     }
 
+    // Prepare updated values
+    const updatedValues = {
+      name: body.name,
+      email: body.email,
+      title: body.title,
+      departmentId: body.departmentId,
+      managerId: body.managerId || null,
+      hireDate: new Date(body.hireDate),
+      salary: body.salary || null,
+      status: body.status,
+      updatedAt: new Date(),
+    };
+
     // Update employee
     const [updatedEmployee] = await db
       .update(employees)
-      .set({
-        name: body.name,
-        email: body.email,
-        title: body.title,
-        departmentId: body.departmentId,
-        managerId: body.managerId || null,
-        hireDate: new Date(body.hireDate),
-        salary: body.salary || null,
-        status: body.status,
-        updatedAt: new Date(),
-      })
+      .set(updatedValues)
       .where(eq(employees.id, id))
       .returning();
+
+    // Create audit log for employee update
+    const { previousValues, newValues } = getChangedFields(
+      existingEmployee,
+      updatedEmployee
+    );
+
+    // Only log if there were actual changes
+    if (Object.keys(newValues).length > 0) {
+      await createAuditLog({
+        entityType: 'employee',
+        entityId: id,
+        action: 'updated',
+        organizationId: existingEmployee.organizationId,
+        previousValues,
+        newValues,
+      });
+    }
 
     return NextResponse.json(updatedEmployee);
   } catch (error: any) {
@@ -142,6 +164,23 @@ export async function DELETE(
       })
       .where(eq(employees.id, id))
       .returning();
+
+    // Create audit log for employee deletion
+    await createAuditLog({
+      entityType: 'employee',
+      entityId: id,
+      action: 'deleted',
+      organizationId: existingEmployee.organizationId,
+      previousValues: {
+        name: existingEmployee.name,
+        email: existingEmployee.email,
+        title: existingEmployee.title,
+        status: existingEmployee.status,
+      },
+      newValues: {
+        status: 'terminated',
+      },
+    });
 
     return NextResponse.json(deletedEmployee);
   } catch (error) {
