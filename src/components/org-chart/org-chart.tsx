@@ -109,7 +109,14 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
       // Use requestAnimationFrame to ensure the DOM has updated with the filtered tree
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          // Reset transform to initial state and recenter content
           transformRef.current?.resetTransform();
+          // Additional centering call to ensure proper centering with new content size
+          requestAnimationFrame(() => {
+            if (transformRef.current?.instance) {
+              transformRef.current.centerView(0.8, 200);
+            }
+          });
         });
       });
     }
