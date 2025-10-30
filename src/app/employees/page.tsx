@@ -73,14 +73,14 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, [fetchEmployees]);
 
-  const handleFilterChange = (newFilters: {
+  const handleFilterChange = useCallback((newFilters: {
     search: string;
     status: EmployeeStatus | null;
     departmentId: string | null;
   }) => {
     setFilters(newFilters);
     setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 on filter change
-  };
+  }, []);
 
   const handlePageChange = (page: number) => {
     setPagination((prev) => ({ ...prev, page }));
