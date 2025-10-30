@@ -52,6 +52,9 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Track previous department filter to detect changes
+  const prevDepartmentIdRef = useRef<string | null | undefined>(selectedDepartmentId);
+
   // Fetch employees from API
   useEffect(() => {
     async function fetchEmployees() {
@@ -98,6 +101,21 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
 
     fetchEmployees();
   }, []);
+
+  // Recenter view when department filter changes
+  useEffect(() => {
+    // Check if the department filter actually changed
+    if (prevDepartmentIdRef.current !== selectedDepartmentId && transformRef.current) {
+      // Use requestAnimationFrame to ensure the DOM has updated with the filtered tree
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          transformRef.current?.resetTransform();
+        });
+      });
+    }
+    // Update the ref to track the current value
+    prevDepartmentIdRef.current = selectedDepartmentId;
+  }, [selectedDepartmentId]);
 
   // Handle node expand/collapse with centering
   const handleToggleExpand = useCallback((employeeId: string) => {
