@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users } from 'lucide-react';
 import type { OrgChartEmployee } from '@/types/org-chart';
 import { cn } from '@/lib/utils';
 
@@ -28,13 +28,16 @@ export function OrgChartNode({
   return (
     <Card
       className={cn(
-        'relative w-64 cursor-pointer transition-all hover:shadow-md',
-        'border-l-4 py-3 gap-2',
+        'relative w-64 transition-all hover:shadow-md overflow-hidden',
+        'border-l-4 p-0 gap-0',
         departmentColor
       )}
-      onClick={() => onViewDetails(employee)}
     >
-      <div className="px-4">
+      {/* Main Card Content - Clickable to view details */}
+      <div
+        className="px-4 py-3 pb-2 cursor-pointer"
+        onClick={() => onViewDetails(employee)}
+      >
         {/* Employee Name */}
         <div className="font-semibold text-sm leading-tight mb-1">
           {employee.name}
@@ -64,14 +67,13 @@ export function OrgChartNode({
         </div>
       </div>
 
-      {/* Expand/Collapse Button */}
+      {/* Expandable Footer - Only shown if has children */}
       {hasChildren && (
         <button
           className={cn(
-            'absolute -bottom-3 left-1/2 -translate-x-1/2',
-            'bg-background border rounded-full p-1',
-            'hover:bg-accent transition-colors',
-            'z-10'
+            'w-full py-2.5 border-t flex items-center justify-center gap-1.5',
+            'hover:bg-accent/50 transition-colors cursor-pointer',
+            'text-xs text-muted-foreground hover:text-foreground'
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -80,9 +82,15 @@ export function OrgChartNode({
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <>
+              <ChevronUp className="h-3.5 w-3.5" />
+              <span>Collapse</span>
+            </>
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <>
+              <ChevronDown className="h-3.5 w-3.5" />
+              <span>Show {directReportsCount} {directReportsCount === 1 ? 'report' : 'reports'}</span>
+            </>
           )}
         </button>
       )}
