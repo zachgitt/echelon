@@ -85,16 +85,22 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
     fetchAuditLogs();
   };
 
-  const getActionBadgeVariant = (action: string) => {
+  const getActionBadgeProps = (action: string) => {
     switch (action) {
       case 'created':
-        return 'default';
+        return {
+          variant: 'outline' as const,
+          className: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950 dark:text-green-400 dark:border-green-800',
+        };
       case 'updated':
-        return 'secondary';
+        return {
+          variant: 'outline' as const,
+          className: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800',
+        };
       case 'deleted':
-        return 'destructive';
+        return { variant: 'destructive' as const };
       default:
-        return 'outline';
+        return { variant: 'outline' as const };
     }
   };
 
@@ -283,7 +289,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={getActionBadgeVariant(log.action)}>
+                    <Badge {...getActionBadgeProps(log.action)}>
                       {log.action}
                     </Badge>
                     <span className="font-medium">
