@@ -29,87 +29,105 @@ export function EmployeeDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{employee.name}</DialogTitle>
+        <DialogHeader className="space-y-3 pb-2">
+          <div>
+            <DialogTitle className="text-2xl font-bold pr-8">{employee.name}</DialogTitle>
+            <div className="flex items-center justify-between gap-4 mt-2">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+                <p className="text-base text-muted-foreground">{employee.title}</p>
+              </div>
+              {/* Status Badge */}
+              <Badge
+                variant={
+                  employee.status === 'active' ? 'default' :
+                  employee.status === 'terminated' ? 'destructive' :
+                  employee.status === 'on_leave' ? 'outline' :
+                  'secondary'
+                }
+                className={
+                  employee.status === 'active' ? 'bg-green-500 text-white pointer-events-none' :
+                  employee.status === 'terminated' ? 'bg-red-500 pointer-events-none' :
+                  employee.status === 'on_leave' ? 'bg-yellow-500 text-white border-yellow-600 pointer-events-none' :
+                  'bg-gray-500 text-white pointer-events-none'
+                }
+              >
+                {employee.status === 'on_leave' ? 'On Leave' :
+                 employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
+              </Badge>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Title */}
-          <div className="flex items-start gap-3">
-            <Briefcase className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">Title</div>
-              <div className="text-base">{employee.title}</div>
+        <div className="space-y-6 pt-2">
+          {/* Contact Information Section */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Contact Information
+            </h3>
+
+            {/* Email */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+              <Mail className="h-5 w-5 text-blue-600/70 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-muted-foreground mb-0.5">Email</div>
+                <a
+                  href={`mailto:${employee.email}`}
+                  className="text-sm text-foreground hover:text-primary hover:underline truncate block"
+                >
+                  {employee.email}
+                </a>
+              </div>
             </div>
           </div>
 
-          {/* Email */}
-          <div className="flex items-start gap-3">
-            <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">Email</div>
-              <a
-                href={`mailto:${employee.email}`}
-                className="text-base text-primary hover:underline"
-              >
-                {employee.email}
-              </a>
-            </div>
-          </div>
+          {/* Organization Details Section */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Organization Details
+            </h3>
 
-          {/* Department */}
-          {employee.department && (
-            <div className="flex items-start gap-3">
-              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Department
+            <div className="grid gap-3">
+              {/* Department */}
+              {employee.department && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                  <Building2 className="h-5 w-5 text-purple-600/70 shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-muted-foreground mb-0.5">
+                      Department
+                    </div>
+                    <div className="text-sm text-foreground">{employee.department.name}</div>
+                  </div>
                 </div>
-                <div className="text-base">{employee.department.name}</div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Hire Date */}
-          <div className="flex items-start gap-3">
-            <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">
-                Hire Date
+              {/* Direct Reports */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                <Users className="h-5 w-5 text-green-600/70 shrink-0" />
+                <div className="flex-1">
+                  <div className="text-xs font-medium text-muted-foreground mb-0.5">
+                    Direct Reports
+                  </div>
+                  <div className="text-sm text-foreground">
+                    {directReportsCount === 0
+                      ? 'No direct reports'
+                      : `${directReportsCount} ${directReportsCount === 1 ? 'person' : 'people'}`}
+                  </div>
+                </div>
               </div>
-              <div className="text-base">
-                {format(new Date(employee.hireDate), 'MMMM d, yyyy')}
-              </div>
-            </div>
-          </div>
 
-          {/* Direct Reports Count */}
-          <div className="flex items-start gap-3">
-            <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">
-                Direct Reports
+              {/* Hire Date */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                <Calendar className="h-5 w-5 text-orange-600/70 shrink-0" />
+                <div className="flex-1">
+                  <div className="text-xs font-medium text-muted-foreground mb-0.5">
+                    Hire Date
+                  </div>
+                  <div className="text-sm text-foreground">
+                    {format(new Date(employee.hireDate), 'MMMM d, yyyy')}
+                  </div>
+                </div>
               </div>
-              <div className="text-base">
-                {directReportsCount === 0
-                  ? 'No direct reports'
-                  : `${directReportsCount} ${directReportsCount === 1 ? 'person' : 'people'}`}
-              </div>
-            </div>
-          </div>
-
-          {/* Status Badge */}
-          <div className="flex items-start gap-3">
-            <div className="h-5 w-5" /> {/* Spacer for alignment */}
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                Status
-              </div>
-              <Badge
-                variant={employee.status === 'active' ? 'default' : 'secondary'}
-              >
-                {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
-              </Badge>
             </div>
           </div>
         </div>
