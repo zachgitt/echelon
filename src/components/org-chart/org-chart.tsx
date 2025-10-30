@@ -113,20 +113,21 @@ export function OrgChart() {
     const shouldShowChildren = hasChildren && isExpanded;
     const departmentColor = employee.departmentId ? getDepartmentColor(employee.departmentId) : undefined;
 
+    const nodeLabel = (
+      <div className={shouldShowChildren ? '' : 'leaf-node'}>
+        <OrgChartNode
+          employee={employee}
+          onViewDetails={handleViewDetails}
+          isExpanded={isExpanded}
+          onToggleExpand={() => handleToggleExpand(employee.id)}
+          hasChildren={hasChildren}
+          departmentColor={departmentColor}
+        />
+      </div>
+    );
+
     return (
-      <TreeNode
-        key={employee.id}
-        label={
-          <OrgChartNode
-            employee={employee}
-            onViewDetails={handleViewDetails}
-            isExpanded={isExpanded}
-            onToggleExpand={() => handleToggleExpand(employee.id)}
-            hasChildren={hasChildren}
-            departmentColor={departmentColor}
-          />
-        }
-      >
+      <TreeNode key={employee.id} label={nodeLabel}>
         {shouldShowChildren &&
           employee.directReports!.map((child) => renderTreeNode(child))}
       </TreeNode>

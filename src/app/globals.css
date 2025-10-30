@@ -120,3 +120,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Org Chart: Hide connector lines for leaf nodes */
+.leaf-node ~ * {
+  display: none !important;
+}
