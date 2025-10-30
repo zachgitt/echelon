@@ -125,3 +125,25 @@
 .leaf-node ~ * {
   display: none !important;
 }
+
+/* Org Chart: Center alignment for nodes */
+.rst__nodeContent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Org Chart: Ensure nodes stay centered when expanded */
+.rst__lineBlock,
+.rst__lineHalfHorizontalRight::before,
+.rst__lineFullVertical::after,
+.rst__lineHalfVerticalTop::after,
+.rst__lineHalfVerticalBottom::after {
+  left: 50% !important;
+}
+
+/* Org Chart: Center the tree node labels */
+ul > li > div {
+  display: flex;
+  justify-content: center;
+}
