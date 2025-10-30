@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmployeeStatusBadge } from './employee-status-badge';
 import { Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { EmployeeWithRelations } from '@/types/employee';
 
 interface EmployeeTableProps {
@@ -126,7 +126,20 @@ export function EmployeeTable({
                   <EmployeeStatusBadge status={employee.status} />
                 </TableCell>
                 <TableCell>
-                  {format(new Date(employee.hireDate), 'MMM d, yyyy')}
+                  {(() => {
+                    const dateStr =
+                      typeof employee.hireDate === 'string'
+                        ? employee.hireDate
+                        : employee.hireDate.toISOString();
+                    // Parse as date-only string (YYYY-MM-DD) in local timezone
+                    const [year, month, day] = dateStr.split('T')[0].split('-');
+                    const localDate = new Date(
+                      parseInt(year),
+                      parseInt(month) - 1,
+                      parseInt(day)
+                    );
+                    return format(localDate, 'MMM d, yyyy');
+                  })()}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">

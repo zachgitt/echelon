@@ -254,6 +254,13 @@ export function EmployeeForm({
             type="date"
             value={formData.hireDate}
             onChange={(e) => handleChange('hireDate', e.target.value)}
+            max={
+              new Date(
+                new Date().getTime() - new Date().getTimezoneOffset() * 60000
+              )
+                .toISOString()
+                .split('T')[0]
+            }
           />
           {errors.hireDate && (
             <p className="text-sm text-red-500">{errors.hireDate}</p>
