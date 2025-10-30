@@ -52,7 +52,7 @@ export default function OrgChartPage() {
   };
 
   return (
-    <div className="flex flex-col -m-4 h-[calc(100vh-4rem)]">
+    <div className="absolute inset-0 flex flex-col">
       {/* Page Header */}
       <div className="border-b bg-background px-6 py-4">
         <div className="flex items-start justify-between gap-4">
