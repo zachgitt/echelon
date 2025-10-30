@@ -3,11 +3,11 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Users } from 'lucide-react';
-import type { OrgChartEmployee } from '@/types/org-chart';
+import type { OrgChartEmployee, OrgChartEmployeeNode } from '@/types/org-chart';
 import { cn } from '@/lib/utils';
 
 interface OrgChartNodeProps {
-  employee: OrgChartEmployee;
+  employee: OrgChartEmployee | OrgChartEmployeeNode;
   onViewDetails: (employee: OrgChartEmployee) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -36,7 +36,7 @@ export function OrgChartNode({
       {/* Main Card Content - Clickable to view details */}
       <div
         className="px-4 py-3 pb-2 cursor-pointer"
-        onClick={() => onViewDetails(employee)}
+        onClick={() => onViewDetails(employee as OrgChartEmployee)}
       >
         {/* Employee Name */}
         <div className="font-semibold text-sm leading-tight mb-1">

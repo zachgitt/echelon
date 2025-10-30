@@ -1,4 +1,4 @@
-import type { OrgChartEmployee } from '@/types/org-chart';
+import type { OrgChartEmployee, OrgChartNode, OrgChartDepartmentNode, OrgChartEmployeeNode } from '@/types/org-chart';
 
 /**
  * Transforms a flat array of employees into a hierarchical tree structure
@@ -118,4 +118,78 @@ export function countTotalReports(employee: OrgChartEmployee): number {
  */
 export function countDirectReports(employee: OrgChartEmployee): number {
   return employee.directReports?.length || 0;
+}
+
+/**
+ * Transforms a flat array of employees into a grouped hierarchical tree structure
+ * with department nodes as the top level, containing employees underneath.
+ *
+ * @param employees - Flat array of employees with managerId references
+ * @returns Array of department nodes with nested employee hierarchies
+ */
+export function buildGroupedEmployeeTree(employees: OrgChartEmployee[]): OrgChartNode[] {
+  // First build the standard employee tree
+  const employeeTree = buildEmployeeTree(employees);
+
+  // Group root employees by department
+  const departmentGroups = new Map<string, OrgChartEmployee[]>();
+
+  employeeTree.forEach((employee) => {
+    const deptId = employee.departmentId || 'no-department';
+    const deptName = employee.department?.name || 'No Department';
+
+    if (!departmentGroups.has(deptId)) {
+      departmentGroups.set(deptId, []);
+    }
+    departmentGroups.get(deptId)!.push(employee);
+  });
+
+  // Create department nodes with employees as children
+  const departmentNodes: OrgChartNode[] = [];
+
+  // Sort departments by name for consistent ordering
+  const sortedDepartments = Array.from(departmentGroups.entries()).sort((a, b) => {
+    const deptNameA = a[1][0]?.department?.name || 'No Department';
+    const deptNameB = b[1][0]?.department?.name || 'No Department';
+    return deptNameA.localeCompare(deptNameB);
+  });
+
+  sortedDepartments.forEach(([deptId, deptEmployees]) => {
+    // Count total employees in this department (including nested reports)
+    const totalEmployeeCount = deptEmployees.reduce((count, emp) => {
+      return count + 1 + countTotalReports(emp);
+    }, 0);
+
+    // Convert employees to OrgChartEmployeeNode type
+    const employeeNodes: OrgChartEmployeeNode[] = deptEmployees.map((emp) =>
+      convertToEmployeeNode(emp)
+    );
+
+    const departmentNode: OrgChartDepartmentNode = {
+      nodeType: 'department',
+      id: `dept-${deptId}`,
+      departmentId: deptId,
+      departmentName: deptEmployees[0]?.department?.name || 'No Department',
+      employeeCount: totalEmployeeCount,
+      directReports: employeeNodes,
+    };
+
+    departmentNodes.push(departmentNode);
+  });
+
+  return departmentNodes;
+}
+
+/**
+ * Recursively converts an OrgChartEmployee to an OrgChartEmployeeNode
+ *
+ * @param employee - Employee to convert
+ * @returns Employee node with proper typing
+ */
+function convertToEmployeeNode(employee: OrgChartEmployee): OrgChartEmployeeNode {
+  return {
+    ...employee,
+    nodeType: 'employee',
+    directReports: employee.directReports?.map(convertToEmployeeNode),
+  };
 }

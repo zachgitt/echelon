@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
-import { OrgChartNode } from './org-chart-node';
+import { OrgChartNode as EmployeeNodeComponent } from './org-chart-node';
+import { DepartmentNode } from './department-node';
 import { EmployeeDetailsDialog } from './employee-details-dialog';
-import type { OrgChartEmployee } from '@/types/org-chart';
-import { buildEmployeeTree } from '@/lib/org-chart/tree-builder';
+import type { OrgChartEmployee, OrgChartNode, OrgChartEmployeeNode, OrgChartDepartmentNode } from '@/types/org-chart';
+import { buildGroupedEmployeeTree } from '@/lib/org-chart/tree-builder';
 import { Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -63,18 +64,21 @@ export function OrgChart() {
         const data = await response.json();
         setEmployees(data);
 
-        // Build tree to set initial expanded state
-        const tree = buildEmployeeTree(data);
+        // Build grouped tree to set initial expanded state
+        const tree = buildGroupedEmployeeTree(data);
         const initialExpanded = new Set<string>();
 
-        // Auto-expand all root level employees
-        tree.forEach((rootEmployee) => {
-          initialExpanded.add(rootEmployee.id);
+        // Auto-expand all department nodes and their top-level employees
+        tree.forEach((node) => {
+          if (node.nodeType === 'department') {
+            // Expand the department node
+            initialExpanded.add(node.id);
 
-          // Auto-expand their direct reports (one level down)
-          if (rootEmployee.directReports && rootEmployee.directReports.length > 0) {
-            rootEmployee.directReports.forEach((directReport) => {
-              initialExpanded.add(directReport.id);
+            // Auto-expand all top-level employees in this department
+            node.directReports?.forEach((employeeNode) => {
+              if (employeeNode.nodeType === 'employee') {
+                initialExpanded.add(employeeNode.id);
+              }
             });
           }
         });
@@ -181,29 +185,64 @@ export function OrgChart() {
     setDialogOpen(true);
   };
 
-  // Recursive function to render tree nodes
-  const renderTreeNode = (employee: OrgChartEmployee): React.ReactNode => {
-    const hasChildren = Boolean(employee.directReports && employee.directReports.length > 0);
-    const isExpanded = expandedNodes.has(employee.id);
+  // Recursive function to render tree nodes (handles both department and employee nodes)
+  const renderTreeNode = (node: OrgChartNode): React.ReactNode => {
+    const hasChildren = Boolean(node.directReports && node.directReports.length > 0);
+    const isExpanded = expandedNodes.has(node.id);
     const shouldShowChildren = hasChildren && isExpanded;
-    const departmentColor = employee.departmentId ? getDepartmentColor(employee.departmentId) : undefined;
+
+    // Render department node
+    if (node.nodeType === 'department') {
+      const departmentColor = getDepartmentColor(node.departmentId);
+
+      const nodeLabel = (
+        <div
+          className={shouldShowChildren ? '' : 'leaf-node'}
+          ref={(el) => {
+            if (el) {
+              nodeRefs.current.set(node.id, el);
+            } else {
+              nodeRefs.current.delete(node.id);
+            }
+          }}
+        >
+          <DepartmentNode
+            departmentName={node.departmentName}
+            employeeCount={node.employeeCount}
+            departmentColor={departmentColor}
+            isExpanded={isExpanded}
+            onToggleExpand={() => handleToggleExpand(node.id)}
+          />
+        </div>
+      );
+
+      return (
+        <TreeNode key={node.id} label={nodeLabel}>
+          {shouldShowChildren &&
+            node.directReports!.map((child) => renderTreeNode(child))}
+        </TreeNode>
+      );
+    }
+
+    // Render employee node
+    const departmentColor = node.departmentId ? getDepartmentColor(node.departmentId) : undefined;
 
     const nodeLabel = (
       <div
         className={shouldShowChildren ? '' : 'leaf-node'}
         ref={(el) => {
           if (el) {
-            nodeRefs.current.set(employee.id, el);
+            nodeRefs.current.set(node.id, el);
           } else {
-            nodeRefs.current.delete(employee.id);
+            nodeRefs.current.delete(node.id);
           }
         }}
       >
-        <OrgChartNode
-          employee={employee}
+        <EmployeeNodeComponent
+          employee={node}
           onViewDetails={handleViewDetails}
           isExpanded={isExpanded}
-          onToggleExpand={() => handleToggleExpand(employee.id)}
+          onToggleExpand={() => handleToggleExpand(node.id)}
           hasChildren={hasChildren}
           departmentColor={departmentColor}
         />
@@ -211,9 +250,9 @@ export function OrgChart() {
     );
 
     return (
-      <TreeNode key={employee.id} label={nodeLabel}>
+      <TreeNode key={node.id} label={nodeLabel}>
         {shouldShowChildren &&
-          employee.directReports!.map((child) => renderTreeNode(child))}
+          node.directReports!.map((child) => renderTreeNode(child))}
       </TreeNode>
     );
   };
@@ -242,8 +281,8 @@ export function OrgChart() {
     );
   }
 
-  // Build tree structure
-  const tree = buildEmployeeTree(employees);
+  // Build grouped tree structure
+  const tree = buildGroupedEmployeeTree(employees);
 
   // Empty state
   if (tree.length === 0) {
@@ -327,9 +366,9 @@ export function OrgChart() {
                     lineWidth="2px"
                     lineColor="#cbd5e1"
                     lineBorderRadius="10px"
-                    label={<div className="text-center text-sm text-muted-foreground mb-8">Organization</div>}
+                    label={<div className="text-center text-lg font-semibold text-muted-foreground mb-8">Organization</div>}
                   >
-                    {tree.map((rootEmployee) => renderTreeNode(rootEmployee))}
+                    {tree.map((node) => renderTreeNode(node))}
                   </Tree>
                 </div>
               </div>
