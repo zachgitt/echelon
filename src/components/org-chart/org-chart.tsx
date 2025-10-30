@@ -36,7 +36,11 @@ function getDepartmentColor(departmentId: string): string {
   return colors[index];
 }
 
-export function OrgChart() {
+interface OrgChartProps {
+  selectedDepartmentId?: string | null;
+}
+
+export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
   const [employees, setEmployees] = useState<OrgChartEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -281,15 +285,24 @@ export function OrgChart() {
     );
   }
 
+  // Filter employees by selected department if applicable
+  const filteredEmployees = selectedDepartmentId
+    ? employees.filter((emp) => emp.departmentId === selectedDepartmentId)
+    : employees;
+
   // Build grouped tree structure
-  const tree = buildGroupedEmployeeTree(employees);
+  const tree = buildGroupedEmployeeTree(filteredEmployees);
 
   // Empty state
   if (tree.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">No active employees found</p>
+          <p className="text-muted-foreground">
+            {selectedDepartmentId
+              ? 'No active employees found in this department'
+              : 'No active employees found'}
+          </p>
         </div>
       </div>
     );
