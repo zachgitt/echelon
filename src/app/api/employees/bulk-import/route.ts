@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { employees, organizations, departments } from '../../../../../db/schema';
 import { createAuditLog } from '@/lib/audit/service';
 import { getAuthenticatedUser } from '@/lib/auth/user';
+import { createClient } from '@/lib/supabase/server';
 import { eq, and } from 'drizzle-orm';
 import Papa from 'papaparse';
 
@@ -34,7 +35,35 @@ interface ImportResult {
 
 export async function POST(request: NextRequest) {
   try {
-    const { organizationId } = await getAuthenticatedUser();
+    // Try to get organization ID from employee record (post-onboarding)
+    // If that fails, get it from user metadata (during onboarding)
+    let organizationId: string;
+
+    try {
+      const authUser = await getAuthenticatedUser();
+      organizationId = authUser.organizationId;
+    } catch (error) {
+      // User doesn't have employee record yet (during onboarding)
+      // Get organization ID from user metadata
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Not authenticated' },
+          { status: 401 }
+        );
+      }
+
+      organizationId = user.user_metadata?.organization_id;
+
+      if (!organizationId) {
+        return NextResponse.json(
+          { error: 'No organization associated with user' },
+          { status: 404 }
+        );
+      }
+    }
 
     // Get the CSV file content from the request body
     const body = await request.json();
