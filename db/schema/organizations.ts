@@ -1,10 +1,11 @@
-import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(), // Will default to domain during signup
   domain: text('domain').notNull().unique(), // e.g., "company.com" from peter@company.com
   description: text('description'),
+  onboardingCompleted: boolean('onboarding_completed').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

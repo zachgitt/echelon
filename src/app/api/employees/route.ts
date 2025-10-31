@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmployees } from '@/lib/employees/queries';
 import { db } from '@/lib/db';
-import { employees } from '../../../../db/schema';
+import { employees, organizations } from '../../../../db/schema';
 import type { EmployeeFilters, EmployeeFormData } from '@/types/employee';
 import { createAuditLog } from '@/lib/audit/service';
 import { getAuthenticatedUser } from '@/lib/auth/user';
 import { createClient } from '@/lib/supabase/server';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -105,11 +106,18 @@ export async function POST(request: NextRequest) {
 
     // If this is during onboarding (user has onboarding_completed: false), mark it as complete
     if (user.user_metadata?.onboarding_completed === false) {
+      // Mark user's onboarding as complete
       await supabase.auth.updateUser({
         data: {
           onboarding_completed: true,
         },
       });
+
+      // Mark organization's onboarding as complete (all 3 steps done)
+      await db
+        .update(organizations)
+        .set({ onboardingCompleted: true })
+        .where(eq(organizations.id, organizationId));
     }
 
     // Create audit log for employee creation

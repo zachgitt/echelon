@@ -39,7 +39,9 @@ export default function SignupPage() {
 
       // Check if onboarding is required
       if (data.requiresOnboarding) {
-        router.push('/onboarding/organization');
+        // Second+ users skip to employee profile creation
+        const path = data.skipToEmployeeStep ? '/onboarding/employee' : '/onboarding/organization';
+        router.push(path);
       } else {
         router.push('/search');
       }

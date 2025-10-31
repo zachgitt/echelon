@@ -25,11 +25,13 @@ export async function middleware(request: NextRequest) {
   // If user is logged in
   if (user && !isApiRoute) {
     const onboardingCompleted = user.user_metadata?.onboarding_completed
+    const skipToEmployeeStep = user.user_metadata?.skip_to_employee_step
 
     // If onboarding is not complete and not already on onboarding path
     if (onboardingCompleted === false && !isOnboardingPath) {
       const url = request.nextUrl.clone()
-      url.pathname = '/onboarding/organization'
+      // Second+ users skip to employee profile creation
+      url.pathname = skipToEmployeeStep ? '/onboarding/employee' : '/onboarding/organization'
       return NextResponse.redirect(url)
     }
 
@@ -44,7 +46,12 @@ export async function middleware(request: NextRequest) {
     if (isPublicPath && request.nextUrl.pathname !== '/auth/callback') {
       const url = request.nextUrl.clone()
       // Redirect based on onboarding status
-      url.pathname = onboardingCompleted === false ? '/onboarding/organization' : '/search'
+      if (onboardingCompleted === false) {
+        // Second+ users skip to employee step
+        url.pathname = skipToEmployeeStep ? '/onboarding/employee' : '/onboarding/organization'
+      } else {
+        url.pathname = '/search'
+      }
       return NextResponse.redirect(url)
     }
   }

@@ -43,6 +43,13 @@
       "when": 1761883720401,
       "tag": "0005_aberrant_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1761888892093,
+      "tag": "0006_woozy_guardsmen",
+      "breakpoints": true
     }
   ]
 }

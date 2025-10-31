@@ -71,11 +71,16 @@ export async function POST(request: NextRequest) {
         .returning();
     }
 
+    // Check if organization has completed onboarding
+    // If yes, this is a second+ user and they only need to create their employee profile
+    const skipToEmployeeStep = org.onboardingCompleted === true;
+
     // Store organization ID in user metadata for onboarding flow
     await supabase.auth.updateUser({
       data: {
         organization_id: org.id,
-        onboarding_completed: false,
+        onboarding_completed: false, // User still needs to complete their own profile
+        skip_to_employee_step: skipToEmployeeStep, // Flag to skip org/dept steps
       },
     });
 
@@ -84,6 +89,7 @@ export async function POST(request: NextRequest) {
       message: 'Account created successfully. Please complete onboarding.',
       requiresOnboarding: true,
       organizationId: org.id,
+      skipToEmployeeStep,
     });
   } catch (error: any) {
     console.error('Signup error:', error);
