@@ -112,6 +112,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine if this is the user's own profile during onboarding
+    const isOwnProfile = user.user_metadata?.onboarding_completed === false;
+
     // Check if employee with this email already exists
     const [existingEmployee] = await db
       .select()
@@ -119,32 +122,101 @@ export async function POST(request: NextRequest) {
       .where(eq(employees.email, body.email))
       .limit(1);
 
+    let newEmployee;
+
     if (existingEmployee) {
-      return NextResponse.json(
-        { error: 'An employee with this email address already exists. Please use a different email.' },
-        { status: 409 }
-      );
-    }
+      // If this is during onboarding and the employee exists without a userId,
+      // link the existing employee record to this user (they were bulk uploaded)
+      if (isOwnProfile && existingEmployee.userId === null) {
+        [newEmployee] = await db
+          .update(employees)
+          .set({
+            userId: user.id,
+            // Update fields with any new information provided during onboarding
+            name: body.name,
+            title: body.title,
+            departmentId: body.departmentId,
+            managerId: body.managerId || existingEmployee.managerId,
+            hireDate: new Date(body.hireDate),
+            salary: body.salary || existingEmployee.salary,
+            status: body.status || existingEmployee.status,
+          })
+          .where(eq(employees.id, existingEmployee.id))
+          .returning();
 
-    // Determine if this is the user's own profile during onboarding
-    const isOwnProfile = user.user_metadata?.onboarding_completed === false;
+        // Create audit log for employee linking
+        await createAuditLog({
+          entityType: 'employee',
+          entityId: newEmployee.id,
+          action: 'updated',
+          organizationId,
+          oldValues: {
+            userId: null,
+            name: existingEmployee.name,
+            title: existingEmployee.title,
+            departmentId: existingEmployee.departmentId,
+            managerId: existingEmployee.managerId,
+            hireDate: existingEmployee.hireDate,
+            salary: existingEmployee.salary,
+            status: existingEmployee.status,
+          },
+          newValues: {
+            userId: user.id,
+            name: newEmployee.name,
+            title: newEmployee.title,
+            departmentId: newEmployee.departmentId,
+            managerId: newEmployee.managerId,
+            hireDate: newEmployee.hireDate,
+            salary: newEmployee.salary,
+            status: newEmployee.status,
+            linkedDuringOnboarding: true,
+          },
+        });
+      } else {
+        // Employee already exists and either:
+        // 1. Already has a userId (already claimed by another user)
+        // 2. This is not during onboarding (admin creating a new employee)
+        return NextResponse.json(
+          { error: 'An employee with this email address already exists. Please use a different email.' },
+          { status: 409 }
+        );
+      }
+    } else {
+      // Create new employee - link to user only if this is their own profile during onboarding
+      [newEmployee] = await db
+        .insert(employees)
+        .values({
+          userId: isOwnProfile ? user.id : null, // Only link to user for their own profile
+          name: body.name,
+          email: body.email,
+          title: body.title,
+          departmentId: body.departmentId,
+          managerId: body.managerId || null,
+          hireDate: new Date(body.hireDate),
+          salary: body.salary || null,
+          status: body.status || 'active',
+          organizationId,
+        })
+        .returning();
 
-    // Create employee - link to user only if this is their own profile during onboarding
-    const [newEmployee] = await db
-      .insert(employees)
-      .values({
-        userId: isOwnProfile ? user.id : null, // Only link to user for their own profile
-        name: body.name,
-        email: body.email,
-        title: body.title,
-        departmentId: body.departmentId,
-        managerId: body.managerId || null,
-        hireDate: new Date(body.hireDate),
-        salary: body.salary || null,
-        status: body.status || 'active',
+      // Create audit log for employee creation
+      await createAuditLog({
+        entityType: 'employee',
+        entityId: newEmployee.id,
+        action: 'created',
         organizationId,
-      })
-      .returning();
+        newValues: {
+          name: newEmployee.name,
+          email: newEmployee.email,
+          title: newEmployee.title,
+          departmentId: newEmployee.departmentId,
+          managerId: newEmployee.managerId,
+          hireDate: newEmployee.hireDate,
+          salary: newEmployee.salary,
+          status: newEmployee.status,
+        },
+      });
+    }
 
     // If this is during onboarding (user has onboarding_completed: false), mark it as complete
     if (user.user_metadata?.onboarding_completed === false) {
@@ -161,24 +233,6 @@ export async function POST(request: NextRequest) {
         .set({ onboardingCompleted: true })
         .where(eq(organizations.id, organizationId));
     }
-
-    // Create audit log for employee creation
-    await createAuditLog({
-      entityType: 'employee',
-      entityId: newEmployee.id,
-      action: 'created',
-      organizationId,
-      newValues: {
-        name: newEmployee.name,
-        email: newEmployee.email,
-        title: newEmployee.title,
-        departmentId: newEmployee.departmentId,
-        managerId: newEmployee.managerId,
-        hireDate: newEmployee.hireDate,
-        salary: newEmployee.salary,
-        status: newEmployee.status,
-      },
-    });
 
     return NextResponse.json(newEmployee, { status: 201 });
   } catch (error: any) {
