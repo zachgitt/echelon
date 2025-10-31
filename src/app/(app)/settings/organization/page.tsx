@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 const COMMON_DEPARTMENTS = [
   'Engineering',
@@ -35,8 +36,8 @@ export default function OrganizationSettingsPage() {
   const [originalDepartments, setOriginalDepartments] = useState<Department[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [deptLoading, setDeptLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const router = useRouter();
 
@@ -100,8 +101,7 @@ export default function OrganizationSettingsPage() {
   async function handleSaveOrganization(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
-    setLoading(true);
+    setOrgLoading(true);
 
     try {
       const response = await fetch('/api/organizations', {
@@ -114,20 +114,21 @@ export default function OrganizationSettingsPage() {
 
       if (!response.ok) {
         setError(data.error || 'Failed to update organization');
+        toast.error(data.error || 'Failed to update organization');
       } else {
-        setSuccess('Organization updated successfully');
+        toast.success('Organization updated successfully');
       }
     } catch (error) {
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
     } finally {
-      setLoading(false);
+      setOrgLoading(false);
     }
   }
 
   async function handleSaveDepartments() {
     setError(null);
-    setSuccess(null);
-    setLoading(true);
+    setDeptLoading(true);
 
     try {
       // Separate new departments (temp IDs) from existing ones
@@ -170,12 +171,13 @@ export default function OrganizationSettingsPage() {
         if (failedResponse) {
           const data = await failedResponse.json();
           setError(data.error || 'Failed to update departments');
-          setLoading(false);
+          toast.error(data.error || 'Failed to update departments');
+          setDeptLoading(false);
           return;
         }
       }
 
-      setSuccess('Departments updated successfully');
+      toast.success('Departments updated successfully');
 
       // Refresh departments list
       const deptResponse = await fetch('/api/departments');
@@ -187,8 +189,9 @@ export default function OrganizationSettingsPage() {
     } catch (error) {
       console.error('Error saving departments:', error);
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
     } finally {
-      setLoading(false);
+      setDeptLoading(false);
     }
   }
 
@@ -213,11 +216,6 @@ export default function OrganizationSettingsPage() {
       <div className="rounded-lg border bg-white p-6 space-y-6">
         <div>
           <h2 className="text-xl font-semibold mb-4">Organization Details</h2>
-          {success && (
-            <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
-              {success}
-            </div>
-          )}
           {error && (
             <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">
               {error}
@@ -270,8 +268,8 @@ export default function OrganizationSettingsPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Organization'}
+            <Button type="submit" disabled={orgLoading}>
+              {orgLoading ? 'Saving...' : 'Save Organization'}
             </Button>
           </div>
         </form>
@@ -350,8 +348,8 @@ export default function OrganizationSettingsPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleSaveDepartments} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Departments'}
+            <Button onClick={handleSaveDepartments} disabled={deptLoading}>
+              {deptLoading ? 'Saving...' : 'Save Departments'}
             </Button>
           </div>
         </div>

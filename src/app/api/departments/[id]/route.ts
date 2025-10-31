@@ -10,7 +10,7 @@ import { eq, and } from 'drizzle-orm';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -33,7 +33,7 @@ export async function DELETE(
       );
     }
 
-    const departmentId = params.id;
+    const { id: departmentId } = await params;
 
     // Validate department ID
     if (!departmentId) {
@@ -95,7 +95,7 @@ export async function DELETE(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -129,7 +129,7 @@ export async function PATCH(
       );
     }
 
-    const departmentId = params.id;
+    const { id: departmentId } = await params;
 
     // Validate department ID
     if (!departmentId) {
