@@ -7,20 +7,31 @@ import { departments } from '../../../../db/schema';
 
 export async function GET() {
   try {
-    // Get authenticated user's organization
-    const { organizationId } = await getAuthenticatedUser();
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const departments = await getDepartments(organizationId);
-    return NextResponse.json(departments);
-  } catch (error) {
-    console.error('Error fetching departments:', error);
-
-    if (error instanceof Error && error.message === 'Not authenticated') {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // During onboarding, get organization ID from user metadata
+    // After onboarding, it would come from employee record
+    const organizationId = user.user_metadata?.organization_id;
+
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'No organization associated with user' },
+        { status: 404 }
+      );
+    }
+
+    const departments = await getDepartments(organizationId);
+    return NextResponse.json(departments);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
 
     return NextResponse.json(
       { error: 'Failed to fetch departments' },

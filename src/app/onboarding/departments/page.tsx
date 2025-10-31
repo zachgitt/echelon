@@ -1,61 +1,76 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 
-interface Department {
-  name: string;
-  description: string;
-}
+const COMMON_DEPARTMENTS = [
+  'Engineering',
+  'Sales',
+  'Marketing',
+  'Product',
+  'Design',
+  'Finance',
+  'HR',
+  'Operations',
+  'Customer Success',
+  'Legal'
+];
 
 export default function DepartmentsOnboardingPage() {
-  const [departments, setDepartments] = useState<Department[]>([
-    { name: '', description: '' }
-  ]);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  function addDepartment() {
-    setDepartments([...departments, { name: '', description: '' }]);
-  }
-
-  function removeDepartment(index: number) {
-    if (departments.length > 1) {
-      setDepartments(departments.filter((_, i) => i !== index));
+  function addDepartment(name: string) {
+    const trimmed = name.trim();
+    if (trimmed && !departments.includes(trimmed)) {
+      setDepartments([...departments, trimmed]);
+      setInputValue('');
+      setError(null);
     }
   }
 
-  function updateDepartment(index: number, field: keyof Department, value: string) {
-    const updated = [...departments];
-    updated[index][field] = value;
-    setDepartments(updated);
+  function removeDepartment(name: string) {
+    setDepartments(departments.filter(d => d !== name));
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addDepartment(inputValue);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    // Validate at least one department with a name
-    const validDepartments = departments.filter(d => d.name.trim() !== '');
-    if (validDepartments.length === 0) {
+    // Add any pending input
+    if (inputValue.trim()) {
+      addDepartment(inputValue);
+      return; // Let the user see it was added, they can submit again
+    }
+
+    if (departments.length === 0) {
       setError('Please add at least one department');
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
       // Create all departments
-      const promises = validDepartments.map(dept =>
+      const promises = departments.map(name =>
         fetch('/api/departments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dept),
+          body: JSON.stringify({ name, description: '' }),
         })
       );
 
@@ -93,64 +108,70 @@ export default function DepartmentsOnboardingPage() {
           )}
 
           <div className="space-y-4">
-            {departments.map((dept, index) => (
-              <div key={index} className="relative rounded-lg border p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-4">
-                    <div>
-                      <label htmlFor={`dept-name-${index}`} className="block text-sm font-medium">
-                        Department Name <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        id={`dept-name-${index}`}
-                        type="text"
-                        value={dept.name}
-                        onChange={(e) => updateDepartment(index, 'name', e.target.value)}
-                        required={index === 0}
-                        className="mt-1"
-                        placeholder="Engineering, Sales, Marketing, etc."
-                      />
-                    </div>
+            {/* Input field */}
+            <div>
+              <label htmlFor="department-input" className="block text-sm font-medium mb-2">
+                Add departments
+              </label>
+              <Input
+                id="department-input"
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type a department name and press Enter..."
+                className="w-full"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Press Enter or comma to add. Click suggestions below to add quickly.
+              </p>
+            </div>
 
-                    <div>
-                      <label htmlFor={`dept-desc-${index}`} className="block text-sm font-medium">
-                        Description (Optional)
-                      </label>
-                      <Textarea
-                        id={`dept-desc-${index}`}
-                        value={dept.description}
-                        onChange={(e) => updateDepartment(index, 'description', e.target.value)}
-                        className="mt-1"
-                        placeholder="Brief description..."
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-
-                  {departments.length > 1 && (
+            {/* Selected departments as tags */}
+            {departments.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-4 rounded-lg border bg-gray-50">
+                {departments.map((dept) => (
+                  <Badge
+                    key={dept}
+                    variant="secondary"
+                    className="text-sm px-3 py-1.5 flex items-center gap-2"
+                  >
+                    {dept}
                     <button
                       type="button"
-                      onClick={() => removeDepartment(index)}
-                      className="ml-4 text-gray-400 hover:text-red-500"
+                      onClick={() => removeDepartment(dept)}
+                      className="hover:text-red-600 transition-colors"
                     >
-                      <X size={20} />
+                      <X size={14} />
                     </button>
-                  )}
-                </div>
+                  </Badge>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Common suggestions */}
+            <div>
+              <p className="text-sm font-medium mb-2 text-gray-700">
+                Common departments:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {COMMON_DEPARTMENTS.filter(d => !departments.includes(d)).map((dept) => (
+                  <Button
+                    key={dept}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addDepartment(dept)}
+                    className="text-xs"
+                  >
+                    + {dept}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addDepartment}
-            className="w-full"
-          >
-            Add Another Department
-          </Button>
-
-          <div className="flex justify-between">
+          <div className="flex justify-between pt-4">
             <Button
               type="button"
               variant="outline"
