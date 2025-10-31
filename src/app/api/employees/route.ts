@@ -5,6 +5,7 @@ import { employees } from '../../../../db/schema';
 import type { EmployeeFilters, EmployeeFormData } from '@/types/employee';
 import { createAuditLog } from '@/lib/audit/service';
 import { getAuthenticatedUser } from '@/lib/auth/user';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,6 +47,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     const body: EmployeeFormData = await request.json();
 
     // Validate required fields
@@ -65,13 +76,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate that manager is not self (if provided)
-    // Note: For new employees, this will be checked during update operations
+    // Get organization ID from user metadata (for onboarding) or from body (for regular employee creation)
+    const organizationId = user.user_metadata?.organization_id || body.organizationId;
 
-    // Create employee
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'No organization associated with user' },
+        { status: 404 }
+      );
+    }
+
+    // Create employee - link to user if this is during onboarding
     const [newEmployee] = await db
       .insert(employees)
       .values({
+        userId: user.id, // Link employee to authenticated user
         name: body.name,
         email: body.email,
         title: body.title,
@@ -80,16 +99,25 @@ export async function POST(request: NextRequest) {
         hireDate: new Date(body.hireDate),
         salary: body.salary || null,
         status: body.status || 'active',
-        organizationId: body.organizationId,
+        organizationId,
       })
       .returning();
+
+    // If this is during onboarding (user has onboarding_completed: false), mark it as complete
+    if (user.user_metadata?.onboarding_completed === false) {
+      await supabase.auth.updateUser({
+        data: {
+          onboarding_completed: true,
+        },
+      });
+    }
 
     // Create audit log for employee creation
     await createAuditLog({
       entityType: 'employee',
       entityId: newEmployee.id,
       action: 'created',
-      organizationId: body.organizationId,
+      organizationId,
       newValues: {
         name: newEmployee.name,
         email: newEmployee.email,

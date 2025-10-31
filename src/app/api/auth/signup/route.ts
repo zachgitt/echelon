@@ -1,8 +1,8 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { employees, organizations, departments } from '../../../../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { organizations } from '../../../../../db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,21 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if organization with this domain exists
-    const [org] = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.domain, domain))
-      .limit(1);
-
-    if (!org) {
-      return NextResponse.json(
-        { error: `No organization found for domain "${domain}". Please contact your administrator.` },
-        { status: 403 }
-      );
-    }
-
-    // Create auth user
+    // Create auth user first
     const supabase = await createServerClient();
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -66,72 +52,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if employee with this email already exists
-    const [existingEmployee] = await db
+    // Check if organization with this domain exists
+    let [org] = await db
       .select()
-      .from(employees)
-      .where(and(
-        eq(employees.email, email),
-        eq(employees.organizationId, org.id)
-      ))
+      .from(organizations)
+      .where(eq(organizations.domain, domain))
       .limit(1);
 
-    if (existingEmployee) {
-      // Link existing employee to new auth user
-      await db
-        .update(employees)
-        .set({
-          userId: authData.user.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(employees.id, existingEmployee.id));
-
-      return NextResponse.json({
-        success: true,
-        message: 'Account created and linked to existing employee record',
-        employeeId: existingEmployee.id,
-      });
-    } else {
-      // Get default department (or create one if needed)
-      let [defaultDept] = await db
-        .select()
-        .from(departments)
-        .where(eq(departments.organizationId, org.id))
-        .limit(1);
-
-      if (!defaultDept) {
-        // Create default department for first employee
-        [defaultDept] = await db
-          .insert(departments)
-          .values({
-            name: 'General',
-            description: 'Default department',
-            organizationId: org.id,
-          })
-          .returning();
-      }
-
-      // Create new employee record
-      const [newEmployee] = await db
-        .insert(employees)
+    // If no organization exists, create one with the domain as the name
+    if (!org) {
+      [org] = await db
+        .insert(organizations)
         .values({
-          userId: authData.user.id,
-          name,
-          email,
-          title: 'Employee', // Default title, can be updated later
-          departmentId: defaultDept.id,
-          organizationId: org.id,
-          hireDate: new Date(),
-          status: 'active',
+          domain,
+          name: domain, // Default to domain, will be updated during onboarding
+          description: null,
         })
         .returning();
-
-      return NextResponse.json({
-        success: true,
-        message: 'Account created successfully',
-        employeeId: newEmployee.id,
-      });
     }
+
+    // Store organization ID in user metadata for onboarding flow
+    await supabase.auth.updateUser({
+      data: {
+        organization_id: org.id,
+        onboarding_completed: false,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Account created successfully. Please complete onboarding.',
+      requiresOnboarding: true,
+      organizationId: org.id,
+    });
   } catch (error: any) {
     console.error('Signup error:', error);
 

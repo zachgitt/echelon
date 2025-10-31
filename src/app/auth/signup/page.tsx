@@ -36,7 +36,13 @@ export default function SignupPage() {
       // Auto-login after signup
       const supabase = createClient();
       await supabase.auth.signInWithPassword({ email, password });
-      router.push('/search');
+
+      // Check if onboarding is required
+      if (data.requiresOnboarding) {
+        router.push('/onboarding/organization');
+      } else {
+        router.push('/search');
+      }
       router.refresh();
     }
   }

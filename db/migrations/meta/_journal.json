@@ -36,6 +36,13 @@
       "when": 1761867131296,
       "tag": "0004_premium_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1761883720401,
+      "tag": "0005_aberrant_menace",
+      "breakpoints": true
     }
   ]
 }
