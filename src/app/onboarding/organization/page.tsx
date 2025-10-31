@@ -78,7 +78,7 @@ export default function OrganizationOnboardingPage() {
         <div>
           <h2 className="text-center text-3xl font-bold">Set up your organization</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Step 1 of 3: Tell us about your company
+            Step 1 of 4: Tell us about your company
           </p>
         </div>
 

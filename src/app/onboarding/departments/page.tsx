@@ -82,7 +82,7 @@ export default function DepartmentsOnboardingPage() {
         setError(data.error || 'Failed to create departments');
         setLoading(false);
       } else {
-        router.push('/onboarding/employee');
+        router.push('/onboarding/bulk-upload');
       }
     } catch (error) {
       setError('An unexpected error occurred');
@@ -96,7 +96,7 @@ export default function DepartmentsOnboardingPage() {
         <div>
           <h2 className="text-center text-3xl font-bold">Add departments</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Step 2 of 3: Create departments for your organization
+            Step 2 of 4: Create departments for your organization
           </p>
         </div>
 

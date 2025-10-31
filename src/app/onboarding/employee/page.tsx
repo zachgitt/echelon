@@ -126,7 +126,7 @@ export default function EmployeeOnboardingPage() {
         <div>
           <h2 className="text-center text-3xl font-bold">Create your profile</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {skipToEmployeeStep ? 'Set up your employee profile' : 'Step 3 of 3: Set up your employee profile'}
+            {skipToEmployeeStep ? 'Set up your employee profile' : 'Step 4 of 4: Set up your employee profile'}
           </p>
         </div>
 
@@ -202,14 +202,16 @@ export default function EmployeeOnboardingPage() {
           </div>
 
           <div className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/onboarding/departments')}
-            >
-              Back
-            </Button>
-            <Button type="submit" disabled={loading}>
+            {!skipToEmployeeStep && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push('/onboarding/bulk-upload')}
+              >
+                Back
+              </Button>
+            )}
+            <Button type="submit" disabled={loading} className={skipToEmployeeStep ? 'ml-auto' : ''}>
               {loading ? 'Creating profile...' : 'Complete Setup'}
             </Button>
           </div>
