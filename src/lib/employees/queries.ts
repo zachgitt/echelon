@@ -3,7 +3,7 @@ import { employees, departments } from '../../../db/schema';
 import { eq, and, or, ilike, sql, desc, asc, inArray } from 'drizzle-orm';
 import type { EmployeeFilters, EmployeeWithRelations } from '../../types/employee';
 
-export async function getEmployees(filters: EmployeeFilters = {}) {
+export async function getEmployees(organizationId: string, filters: EmployeeFilters = {}) {
   const {
     search,
     status,
@@ -16,6 +16,9 @@ export async function getEmployees(filters: EmployeeFilters = {}) {
 
   // Build WHERE conditions
   const conditions = [];
+
+  // Always filter by organization
+  conditions.push(eq(employees.organizationId, organizationId));
 
   // Search across name, email, and title
   if (search && search.trim()) {
@@ -124,7 +127,7 @@ export async function getEmployees(filters: EmployeeFilters = {}) {
   };
 }
 
-export async function getEmployeeById(id: string) {
+export async function getEmployeeById(id: string, organizationId: string) {
   const result = await db
     .select({
       id: employees.id,
@@ -146,7 +149,10 @@ export async function getEmployeeById(id: string) {
     })
     .from(employees)
     .leftJoin(departments, eq(employees.departmentId, departments.id))
-    .where(eq(employees.id, id))
+    .where(and(
+      eq(employees.id, id),
+      eq(employees.organizationId, organizationId)
+    ))
     .limit(1);
 
   if (result.length === 0) {
@@ -155,7 +161,7 @@ export async function getEmployeeById(id: string) {
 
   const employee = result[0];
 
-  // Fetch manager info if exists
+  // Fetch manager info if exists (also filter by org)
   let manager = null;
   if (employee.managerId) {
     const managerResult = await db
@@ -164,7 +170,10 @@ export async function getEmployeeById(id: string) {
         name: employees.name,
       })
       .from(employees)
-      .where(eq(employees.id, employee.managerId))
+      .where(and(
+        eq(employees.id, employee.managerId),
+        eq(employees.organizationId, organizationId)
+      ))
       .limit(1);
 
     manager = managerResult[0] || null;
@@ -176,17 +185,18 @@ export async function getEmployeeById(id: string) {
   } as EmployeeWithRelations;
 }
 
-export async function getDepartments() {
+export async function getDepartments(organizationId: string) {
   return db
     .select({
       id: departments.id,
       name: departments.name,
     })
     .from(departments)
+    .where(eq(departments.organizationId, organizationId))
     .orderBy(asc(departments.name));
 }
 
-export async function getActiveEmployees() {
+export async function getActiveEmployees(organizationId: string) {
   return db
     .select({
       id: employees.id,
@@ -194,6 +204,9 @@ export async function getActiveEmployees() {
       title: employees.title,
     })
     .from(employees)
-    .where(eq(employees.status, 'active'))
+    .where(and(
+      eq(employees.status, 'active'),
+      eq(employees.organizationId, organizationId)
+    ))
     .orderBy(asc(employees.name));
 }

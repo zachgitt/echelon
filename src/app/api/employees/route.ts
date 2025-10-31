@@ -4,9 +4,13 @@ import { db } from '@/lib/db';
 import { employees } from '../../../../db/schema';
 import type { EmployeeFilters, EmployeeFormData } from '@/types/employee';
 import { createAuditLog } from '@/lib/audit/service';
+import { getAuthenticatedUser } from '@/lib/auth/user';
 
 export async function GET(request: NextRequest) {
   try {
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse filters from query params
@@ -20,11 +24,19 @@ export async function GET(request: NextRequest) {
       sortOrder: (searchParams.get('sortOrder') as any) || 'asc',
     };
 
-    const result = await getEmployees(filters);
+    const result = await getEmployees(organizationId, filters);
 
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching employees:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch employees' },
       { status: 500 }

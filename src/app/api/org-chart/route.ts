@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { employees, departments, organizations } from '../../../../db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and } from 'drizzle-orm';
+import { getAuthenticatedUser } from '@/lib/auth/user';
 
 export async function GET() {
   try {
-    // Fetch all active employees with department information
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
+    // Fetch all active employees with department information for this organization
     const results = await db
       .select({
         id: employees.id,
@@ -23,31 +27,20 @@ export async function GET() {
       })
       .from(employees)
       .leftJoin(departments, eq(employees.departmentId, departments.id))
-      .where(eq(employees.status, 'active'))
+      .where(and(
+        eq(employees.status, 'active'),
+        eq(employees.organizationId, organizationId)
+      ))
       .orderBy(asc(employees.name));
 
-    // Fetch organization name (assuming all employees belong to the same organization)
-    // We get the organization from the first employee's organizationId
-    let organizationName = 'Organization';
-    if (results.length > 0) {
-      const firstEmployeeOrgId = await db
-        .select({ organizationId: employees.organizationId })
-        .from(employees)
-        .where(eq(employees.id, results[0].id))
-        .limit(1);
+    // Fetch organization name
+    const [org] = await db
+      .select({ name: organizations.name })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1);
 
-      if (firstEmployeeOrgId.length > 0) {
-        const org = await db
-          .select({ name: organizations.name })
-          .from(organizations)
-          .where(eq(organizations.id, firstEmployeeOrgId[0].organizationId))
-          .limit(1);
-
-        if (org.length > 0) {
-          organizationName = org[0].name;
-        }
-      }
-    }
+    const organizationName = org?.name || 'Organization';
 
     return NextResponse.json({
       organizationName,
@@ -55,6 +48,14 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching org chart data:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch organizational chart data' },
       { status: 500 }

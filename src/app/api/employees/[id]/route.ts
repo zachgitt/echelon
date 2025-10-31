@@ -2,17 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEmployeeById } from '@/lib/employees/queries';
 import { db } from '@/lib/db';
 import { employees } from '../../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { EmployeeFormData } from '@/types/employee';
 import { createAuditLog, getChangedFields } from '@/lib/audit/service';
+import { getAuthenticatedUser } from '@/lib/auth/user';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
     const { id } = await params;
-    const employee = await getEmployeeById(id);
+    const employee = await getEmployeeById(id, organizationId);
 
     if (!employee) {
       return NextResponse.json(
@@ -24,6 +28,14 @@ export async function GET(
     return NextResponse.json(employee);
   } catch (error) {
     console.error('Error fetching employee:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch employee' },
       { status: 500 }
@@ -36,6 +48,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
     const { id } = await params;
     const body: EmployeeFormData = await request.json();
 
@@ -64,8 +79,8 @@ export async function PUT(
       );
     }
 
-    // Check if employee exists
-    const existingEmployee = await getEmployeeById(id);
+    // Check if employee exists in this organization
+    const existingEmployee = await getEmployeeById(id, organizationId);
     if (!existingEmployee) {
       return NextResponse.json(
         { error: 'Employee not found' },
@@ -86,11 +101,14 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    // Update employee
+    // Update employee (ensure it's in the same organization)
     const [updatedEmployee] = await db
       .update(employees)
       .set(updatedValues)
-      .where(eq(employees.id, id))
+      .where(and(
+        eq(employees.id, id),
+        eq(employees.organizationId, organizationId)
+      ))
       .returning();
 
     // Create audit log for employee update
@@ -114,6 +132,13 @@ export async function PUT(
     return NextResponse.json(updatedEmployee);
   } catch (error: any) {
     console.error('Error updating employee:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
 
     // Handle unique constraint violations
     // Drizzle wraps the Postgres error in error.cause
@@ -144,10 +169,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
     const { id } = await params;
 
-    // Check if employee exists
-    const existingEmployee = await getEmployeeById(id);
+    // Check if employee exists in this organization
+    const existingEmployee = await getEmployeeById(id, organizationId);
     if (!existingEmployee) {
       return NextResponse.json(
         { error: 'Employee not found' },
@@ -155,14 +183,17 @@ export async function DELETE(
       );
     }
 
-    // Soft delete by setting status to terminated
+    // Soft delete by setting status to terminated (ensure it's in the same organization)
     const [deletedEmployee] = await db
       .update(employees)
       .set({
         status: 'terminated',
         updatedAt: new Date(),
       })
-      .where(eq(employees.id, id))
+      .where(and(
+        eq(employees.id, id),
+        eq(employees.organizationId, organizationId)
+      ))
       .returning();
 
     // Create audit log for employee deletion
@@ -185,6 +216,14 @@ export async function DELETE(
     return NextResponse.json(deletedEmployee);
   } catch (error) {
     console.error('Error deleting employee:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to delete employee' },
       { status: 500 }

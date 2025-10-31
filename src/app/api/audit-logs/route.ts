@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuditLogs } from '@/lib/audit/queries';
 import type { AuditLogFilters } from '@/lib/audit/queries';
 import type { AuditAction, AuditEntityType } from '@/lib/audit/service';
+import { getAuthenticatedUser } from '@/lib/auth/user';
 
 export async function GET(request: NextRequest) {
   try {
+    // Get authenticated user's organization
+    const { organizationId } = await getAuthenticatedUser();
+
     const searchParams = request.nextUrl.searchParams;
 
-    // Parse filters from query params
+    // Parse filters from query params - always use authenticated user's organization
     const filters: AuditLogFilters = {
-      organizationId: searchParams.get('organizationId') || undefined,
+      organizationId, // Force to use authenticated user's organization
       entityType: searchParams.getAll('entityType') as AuditEntityType[],
       entityId: searchParams.get('entityId') || undefined,
       action: searchParams.getAll('action') as AuditAction[],
@@ -29,6 +33,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
+
+    if (error instanceof Error && error.message === 'Not authenticated') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch audit logs' },
       { status: 500 }
