@@ -20,6 +20,7 @@ export default function EmployeeOnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [skipToEmployeeStep, setSkipToEmployeeStep] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function EmployeeOnboardingPage() {
         if (user) {
           setEmail(user.email || '');
           setName(user.user_metadata?.name || '');
+          setSkipToEmployeeStep(user.user_metadata?.skip_to_employee_step || false);
         }
 
         // Fetch departments
@@ -124,7 +126,7 @@ export default function EmployeeOnboardingPage() {
         <div>
           <h2 className="text-center text-3xl font-bold">Create your profile</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Step 3 of 3: Set up your employee profile
+            {skipToEmployeeStep ? 'Set up your employee profile' : 'Step 3 of 3: Set up your employee profile'}
           </p>
         </div>
 
