@@ -134,6 +134,43 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
     }
 
     if (action === 'updated' && previousValues && newValues) {
+      // Check if this is an employee linking during onboarding
+      const isEmployeeLinking = newValues.linkedDuringOnboarding === true;
+
+      if (isEmployeeLinking) {
+        // Filter out the linkedDuringOnboarding flag from display
+        const changedFields = Object.keys(newValues).filter(
+          (field) => field !== 'linkedDuringOnboarding'
+        );
+
+        return (
+          <div className="mt-2 space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              Employee profile linked to user account during signup
+            </p>
+            {changedFields.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {changedFields.map((field) => (
+                  <div key={field} className="flex gap-2">
+                    <span className="font-medium text-muted-foreground">
+                      {formatFieldName(field)}:
+                    </span>
+                    <span className="text-red-600 line-through">
+                      {formatFieldValue(previousValues[field])}
+                    </span>
+                    <span>→</span>
+                    <span className="text-green-600">
+                      {formatFieldValue(newValues[field])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Regular update - show all changed fields
       const changedFields = Object.keys(newValues);
 
       if (changedFields.length === 0) {

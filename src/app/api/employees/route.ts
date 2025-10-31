@@ -3,7 +3,7 @@ import { getEmployees } from '@/lib/employees/queries';
 import { db } from '@/lib/db';
 import { employees, organizations } from '../../../../db/schema';
 import type { EmployeeFilters, EmployeeFormData } from '@/types/employee';
-import { createAuditLog } from '@/lib/audit/service';
+import { createAuditLog, getChangedFields } from '@/lib/audit/service';
 import { getAuthenticatedUser } from '@/lib/auth/user';
 import { createClient } from '@/lib/supabase/server';
 import { eq } from 'drizzle-orm';
@@ -144,31 +144,20 @@ export async function POST(request: NextRequest) {
           .where(eq(employees.id, existingEmployee.id))
           .returning();
 
-        // Create audit log for employee linking
+        // Create audit log for employee linking - use getChangedFields to only log actual changes
+        const { previousValues, newValues } = getChangedFields(
+          existingEmployee,
+          newEmployee
+        );
+
         await createAuditLog({
           entityType: 'employee',
           entityId: newEmployee.id,
           action: 'updated',
           organizationId,
-          oldValues: {
-            userId: null,
-            name: existingEmployee.name,
-            title: existingEmployee.title,
-            departmentId: existingEmployee.departmentId,
-            managerId: existingEmployee.managerId,
-            hireDate: existingEmployee.hireDate,
-            salary: existingEmployee.salary,
-            status: existingEmployee.status,
-          },
+          previousValues,
           newValues: {
-            userId: user.id,
-            name: newEmployee.name,
-            title: newEmployee.title,
-            departmentId: newEmployee.departmentId,
-            managerId: newEmployee.managerId,
-            hireDate: newEmployee.hireDate,
-            salary: newEmployee.salary,
-            status: newEmployee.status,
+            ...newValues,
             linkedDuringOnboarding: true,
           },
         });
