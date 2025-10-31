@@ -73,6 +73,7 @@ export async function getEmployees(filters: EmployeeFilters = {}) {
       salary: employees.salary,
       status: employees.status,
       organizationId: employees.organizationId,
+      userId: employees.userId,
       createdAt: employees.createdAt,
       updatedAt: employees.updatedAt,
       department: {

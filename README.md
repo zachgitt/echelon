@@ -14,11 +14,7 @@ npm install
 
 2. Run `Docker Desktop`
 
-3. Configure environment variables:
-
-Copy the `.env.example` into a `.env` file in the project root
-
-4. Start local Supabase:
+3. Start local Supabase:
 
 ```bash
 npm run supabase:start
@@ -26,13 +22,25 @@ npm run supabase:start
 
 This will start local PostgreSQL and Supabase services. Keep this running while developing.
 
+4. Configure environment variables:
+
+Copy the `.env.example` into a `.env.local` file in the project root:
+
+```bash
+cp .env.example .env.local
+```
+
+Then run `npm run supabase:status` and copy the **Publishable key** and **Secret key** into your `.env.local` file:
+- Replace `your_anon_key_here` with the Publishable key
+- Replace `your_service_role_key_here` with the Secret key
+
 5. Run database migrations:
 
 ```bash
 npm run db:migrate
 ```
 
-This will create the initial database tables (e.g., organizations) in your local Supabase database.
+This will create the initial database tables (organizations, employees, etc.) in your local Supabase database.
 
 6. Run the development server:
 

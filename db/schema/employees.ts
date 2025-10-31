@@ -15,6 +15,9 @@ export const employees = pgTable('employees', {
   // Optional: Can be linked to auth.users.id if the employee has a user account
   id: uuid('id').primaryKey().defaultRandom(),
 
+  // Link to Supabase auth.users - nullable because employees can exist without user accounts
+  userId: uuid('user_id').unique(),
+
   // Employee attributes
   name: text('name').notNull(),
   title: text('title').notNull(),
