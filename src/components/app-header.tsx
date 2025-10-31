@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Settings } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -81,6 +81,14 @@ export function AppHeader() {
                 <p className="text-sm text-gray-500">{userEmail}</p>
               </div>
               <Separator />
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2"
+                onClick={() => router.push('/settings/organization')}
+              >
+                <Settings className="h-4 w-4" />
+                Organization Settings
+              </Button>
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2"
