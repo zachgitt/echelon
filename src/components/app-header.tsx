@@ -17,6 +17,7 @@ export function AppHeader() {
   const [organizationName, setOrganizationName] = useState<string>('Echelon');
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export function AppHeader() {
       <span className="font-semibold">{organizationName}</span>
 
       <div className="ml-auto">
-        <Popover>
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               <User className="h-4 w-4" />
@@ -84,7 +85,10 @@ export function AppHeader() {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2"
-                onClick={() => router.push('/settings/organization')}
+                onClick={() => {
+                  setIsPopoverOpen(false);
+                  router.push('/settings/organization');
+                }}
               >
                 <Settings className="h-4 w-4" />
                 Organization Settings
