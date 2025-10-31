@@ -9,8 +9,11 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ['/auth/login', '/auth/signup', '/auth/callback', '/auth/error']
   const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
 
+  // Skip auth checks for API routes - they handle their own auth
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+
   // If user is not logged in and trying to access protected route
-  if (!user && !isPublicPath) {
+  if (!user && !isPublicPath && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

@@ -40,6 +40,9 @@ export function AppHeader() {
           if (empResponse.ok) {
             const empData = await empResponse.json();
             setUserName(empData.name || user.email?.split('@')[0] || 'User');
+          } else {
+            // If API fails, just use email prefix
+            setUserName(user.email?.split('@')[0] || 'User');
           }
         }
       } catch (err) {
