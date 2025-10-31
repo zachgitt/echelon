@@ -87,11 +87,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create employee - link to user if this is during onboarding
+    // Fetch organization to validate email domain
+    const [organization] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      );
+    }
+
+    // Extract domain from employee email
+    const emailDomain = body.email.split('@')[1];
+
+    // Validate email domain matches organization domain
+    if (emailDomain !== organization.domain) {
+      return NextResponse.json(
+        { error: `Email domain must match your organization's domain (@${organization.domain})` },
+        { status: 400 }
+      );
+    }
+
+    // Check if employee with this email already exists
+    const [existingEmployee] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.email, body.email))
+      .limit(1);
+
+    if (existingEmployee) {
+      return NextResponse.json(
+        { error: 'An employee with this email address already exists. Please use a different email.' },
+        { status: 409 }
+      );
+    }
+
+    // Determine if this is the user's own profile during onboarding
+    const isOwnProfile = user.user_metadata?.onboarding_completed === false;
+
+    // Create employee - link to user only if this is their own profile during onboarding
     const [newEmployee] = await db
       .insert(employees)
       .values({
-        userId: user.id, // Link employee to authenticated user
+        userId: isOwnProfile ? user.id : null, // Only link to user for their own profile
         name: body.name,
         email: body.email,
         title: body.title,
