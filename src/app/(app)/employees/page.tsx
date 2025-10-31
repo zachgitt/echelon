@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { EmployeeFilters } from '@/components/employees/employee-filters';
 import { EmployeeTable } from '@/components/employees/employee-table';
 import { EmployeeFormDialog } from '@/components/employees/employee-form-dialog';
-import { Plus } from 'lucide-react';
+import { EmployeeBulkImportDialog } from '@/components/employees/employee-bulk-import-dialog';
+import { Plus, Upload } from 'lucide-react';
 import type {
   EmployeeWithRelations,
   EmployeesListResponse,
@@ -30,6 +31,7 @@ export default function EmployeesPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeWithRelations | null>(null);
 
@@ -118,6 +120,14 @@ export default function EmployeesPage() {
     fetchEmployees();
   };
 
+  const handleBulkImport = () => {
+    setIsBulkImportOpen(true);
+  };
+
+  const handleBulkImportSuccess = () => {
+    fetchEmployees();
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-6">
@@ -129,10 +139,16 @@ export default function EmployeesPage() {
             Manage your organization&apos;s employees
           </p>
         </div>
-        <Button onClick={handleAddEmployee}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Employee
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleBulkImport} variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
+          <Button onClick={handleAddEmployee}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Employee
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -156,6 +172,12 @@ export default function EmployeesPage() {
         employee={selectedEmployee}
         onSuccess={handleFormSuccess}
         organizationId={MOCK_ORGANIZATION_ID}
+      />
+
+      <EmployeeBulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        onSuccess={handleBulkImportSuccess}
       />
     </div>
   );

@@ -47,3 +47,30 @@ export interface EmployeeFormData {
   status: EmployeeStatus;
   organizationId: string;
 }
+
+// Bulk import types
+export interface EmployeeCSVRow {
+  name: string;
+  email: string;
+  title: string;
+  departmentName: string;
+  managerEmail?: string;
+  hireDate: string;
+  salary?: string;
+  status: string;
+}
+
+export interface EmployeeBulkImportError {
+  row: number;
+  field: string;
+  message: string;
+  value?: string;
+}
+
+export interface EmployeeBulkImportResult {
+  success: boolean;
+  imported: number;
+  failed: number;
+  errors: EmployeeBulkImportError[];
+  employees?: Employee[];
+}
