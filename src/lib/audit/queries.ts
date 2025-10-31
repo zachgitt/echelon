@@ -130,10 +130,78 @@ export async function getAuditLogs(filters: AuditLogFilters) {
         }
       }
 
+      // Enrich department and manager IDs with names
+      let enrichedNewValues = log.newValues as Record<string, any> | null;
+      let enrichedPreviousValues = log.previousValues as Record<string, any> | null;
+
+      if (log.entityType === 'employee') {
+        // Enrich newValues
+        if (enrichedNewValues) {
+          enrichedNewValues = { ...enrichedNewValues };
+
+          // Replace departmentId with department name
+          if (enrichedNewValues.departmentId) {
+            const [department] = await db
+              .select({ name: departments.name })
+              .from(departments)
+              .where(eq(departments.id, enrichedNewValues.departmentId))
+              .limit(1);
+
+            if (department) {
+              enrichedNewValues.departmentId = department.name;
+            }
+          }
+
+          // Replace managerId with manager name
+          if (enrichedNewValues.managerId) {
+            const [manager] = await db
+              .select({ name: employees.name })
+              .from(employees)
+              .where(eq(employees.id, enrichedNewValues.managerId))
+              .limit(1);
+
+            if (manager) {
+              enrichedNewValues.managerId = manager.name;
+            }
+          }
+        }
+
+        // Enrich previousValues
+        if (enrichedPreviousValues) {
+          enrichedPreviousValues = { ...enrichedPreviousValues };
+
+          // Replace departmentId with department name
+          if (enrichedPreviousValues.departmentId) {
+            const [department] = await db
+              .select({ name: departments.name })
+              .from(departments)
+              .where(eq(departments.id, enrichedPreviousValues.departmentId))
+              .limit(1);
+
+            if (department) {
+              enrichedPreviousValues.departmentId = department.name;
+            }
+          }
+
+          // Replace managerId with manager name
+          if (enrichedPreviousValues.managerId) {
+            const [manager] = await db
+              .select({ name: employees.name })
+              .from(employees)
+              .where(eq(employees.id, enrichedPreviousValues.managerId))
+              .limit(1);
+
+            if (manager) {
+              enrichedPreviousValues.managerId = manager.name;
+            }
+          }
+        }
+      }
+
       return {
         ...log,
-        previousValues: log.previousValues as Record<string, any> | null,
-        newValues: log.newValues as Record<string, any> | null,
+        previousValues: enrichedPreviousValues,
+        newValues: enrichedNewValues,
         entityName,
       };
     })

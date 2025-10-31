@@ -65,8 +65,8 @@ export function getChangedFields(
 
   // Check all keys in current object
   for (const key in current) {
-    // Skip internal fields
-    if (['id', 'createdAt', 'updatedAt'].includes(key)) {
+    // Skip internal fields and userId (which should never be visible in audit logs)
+    if (['id', 'createdAt', 'updatedAt', 'userId', 'organizationId'].includes(key)) {
       continue;
     }
 
