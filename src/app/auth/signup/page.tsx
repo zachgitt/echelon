@@ -20,32 +20,63 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
-    // Call our custom signup API (will implement in Phase 2)
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
-    });
+    try {
+      console.log('[Signup] Starting signup process for:', email);
 
-    const data = await response.json();
+      // Call our custom signup API (will implement in Phase 2)
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
 
-    if (!response.ok) {
-      setError(data.error || 'Signup failed');
-      setLoading(false);
-    } else {
+      console.log('[Signup] API response status:', response.status);
+      console.log('[Signup] API response ok:', response.ok);
+
+      const data = await response.json();
+      console.log('[Signup] API response data:', data);
+
+      if (!response.ok) {
+        console.error('[Signup] API request failed:', data);
+        setError(data.error || 'Signup failed');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Signup] Attempting auto-login...');
       // Auto-login after signup
       const supabase = createClient();
-      await supabase.auth.signInWithPassword({ email, password });
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (loginError) {
+        console.error('[Signup] Auto-login failed:', loginError);
+        setError(`Account created but login failed: ${loginError.message}. Please try signing in manually.`);
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Signup] Auto-login successful:', loginData);
+      console.log('[Signup] Requires onboarding:', data.requiresOnboarding);
+      console.log('[Signup] Skip to employee step:', data.skipToEmployeeStep);
 
       // Check if onboarding is required
       if (data.requiresOnboarding) {
         // Second+ users skip to employee profile creation
         const path = data.skipToEmployeeStep ? '/onboarding/employee' : '/onboarding/organization';
+        console.log('[Signup] Redirecting to:', path);
         router.push(path);
       } else {
+        console.log('[Signup] Redirecting to /search');
         router.push('/search');
       }
       router.refresh();
+    } catch (error) {
+      console.error('[Signup] Unexpected error during signup:', error);
+      setError(`Internal error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLoading(false);
     }
   }
 
