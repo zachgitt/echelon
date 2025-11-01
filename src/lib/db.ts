@@ -7,7 +7,19 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create postgres connection to Supabase database
-const client = postgres(process.env.DATABASE_URL);
+// Configure for serverless environments (Vercel)
+const client = postgres(process.env.DATABASE_URL, {
+  // Maximum number of connections (serverless needs lower values)
+  max: 1,
+  // Idle timeout - close connections after 30 seconds
+  idle_timeout: 30,
+  // Max lifetime of a connection
+  max_lifetime: 60 * 30, // 30 minutes
+  // Connection timeout
+  connect_timeout: 10,
+  // Prepare statements - set to false for serverless (prevents connection state issues)
+  prepare: false,
+});
 
 // Create drizzle instance with schema
 export const db = drizzle(client, { schema });
