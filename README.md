@@ -3,6 +3,7 @@
 - npm
 - Docker Desktop
 - Supabase CLI
+- Vercel CLI
 
 ## Quick Start
 
@@ -75,10 +76,15 @@ Note: Supabase runs independently from Next.js, so you can restart `npm run dev`
 - `npm run supabase:status` - Check Supabase status
 
 ## Deployment
-Push migrations to production Supabase
+
+#### Push migrations to production Supabase
 - `npx supabase login`
 - `npx supabase projects list` - to get reference id
 - `npx supabase link --project-ref [REF_ID]`
 - Update .env.local file to production values
 - `npx supabase db push`
+#### Deploy to Vercel
+- `vercel login`
+- `vercel list` - to link
+- `vercel --prod` - to push
 
