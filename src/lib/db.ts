@@ -9,8 +9,8 @@ if (!process.env.DATABASE_URL) {
 // Create postgres connection to Supabase database
 // Configure for serverless environments (Vercel)
 const client = postgres(process.env.DATABASE_URL, {
-  // Maximum number of connections (serverless needs lower values)
-  max: 1,
+  // Maximum number of connections (serverless needs lower values, but enough for bulk operations)
+  max: 10,
   // Idle timeout - close connections after 30 seconds
   idle_timeout: 30,
   // Max lifetime of a connection
