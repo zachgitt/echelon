@@ -1,4 +1,4 @@
-import type { OrgChartEmployee, OrgChartNode, OrgChartDepartmentNode, OrgChartEmployeeNode } from '@/types/org-chart';
+import type { OrgChartEmployee, OrgChartNode, OrgChartDepartmentNode, OrgChartEmployeeNode, OrgChartDepartment } from '@/types/org-chart';
 
 /**
  * Transforms a flat array of employees into a hierarchical tree structure
@@ -191,5 +191,102 @@ function convertToEmployeeNode(employee: OrgChartEmployee): OrgChartEmployeeNode
     ...employee,
     nodeType: 'employee',
     directReports: employee.directReports?.map(convertToEmployeeNode),
+  };
+}
+
+/**
+ * Transforms a flat array of departments into a hierarchical tree structure
+ * based on parent-child relationships.
+ *
+ * @param departments - Flat array of departments with parentDepartmentId references
+ * @returns Array of root departments (those without parents) with nested subdepartments
+ */
+export function buildDepartmentTree(
+  departments: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    parentDepartmentId: string | null;
+    employeeCount: number;
+  }>
+): OrgChartDepartment[] {
+  // Create a map for quick lookup
+  const deptMap = new Map<string, OrgChartDepartment>();
+
+  // Initialize all departments in the map
+  departments.forEach((dept) => {
+    deptMap.set(dept.id, {
+      ...dept,
+      totalEmployeeCount: dept.employeeCount,
+      subdepartments: [],
+    });
+  });
+
+  // Array to store root departments
+  const rootDepartments: OrgChartDepartment[] = [];
+
+  // Build the tree by assigning each department to its parent
+  departments.forEach((dept) => {
+    const currentDept = deptMap.get(dept.id)!;
+
+    if (dept.parentDepartmentId === null) {
+      // Root department
+      rootDepartments.push(currentDept);
+    } else {
+      // Find parent and add to subdepartments
+      const parent = deptMap.get(dept.parentDepartmentId);
+      if (parent) {
+        parent.subdepartments!.push(currentDept);
+      } else {
+        // If parent not found, treat as root
+        rootDepartments.push(currentDept);
+      }
+    }
+  });
+
+  // Calculate total employee counts recursively
+  const calculateTotalEmployees = (dept: OrgChartDepartment): number => {
+    let total = dept.employeeCount;
+    dept.subdepartments?.forEach((sub) => {
+      total += calculateTotalEmployees(sub);
+    });
+    dept.totalEmployeeCount = total;
+    return total;
+  };
+
+  rootDepartments.forEach(calculateTotalEmployees);
+
+  // Sort departments alphabetically
+  const sortDepartments = (depts: OrgChartDepartment[]) => {
+    depts.sort((a, b) => a.name.localeCompare(b.name));
+    depts.forEach((dept) => {
+      if (dept.subdepartments && dept.subdepartments.length > 0) {
+        sortDepartments(dept.subdepartments);
+      }
+    });
+  };
+
+  sortDepartments(rootDepartments);
+
+  return rootDepartments;
+}
+
+/**
+ * Converts OrgChartDepartment to OrgChartDepartmentNode for rendering
+ *
+ * @param dept - Department to convert
+ * @returns Department node with proper typing for org chart rendering
+ */
+export function convertDepartmentToNode(
+  dept: OrgChartDepartment
+): OrgChartDepartmentNode {
+  return {
+    nodeType: 'department',
+    id: dept.id,
+    departmentId: dept.id,
+    departmentName: dept.name,
+    employeeCount: dept.totalEmployeeCount,
+    subdepartmentCount: dept.subdepartments?.length || 0,
+    directReports: dept.subdepartments?.map(convertDepartmentToNode),
   };
 }

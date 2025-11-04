@@ -6,8 +6,10 @@ import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'reac
 import { OrgChartNode as EmployeeNodeComponent } from './org-chart-node';
 import { DepartmentNode } from './department-node';
 import { EmployeeDetailsDialog } from './employee-details-dialog';
-import type { OrgChartEmployee, OrgChartNode, OrgChartEmployeeNode, OrgChartDepartmentNode } from '@/types/org-chart';
-import { buildGroupedEmployeeTree } from '@/lib/org-chart/tree-builder';
+import { AddDepartmentDialog } from './add-department-dialog';
+import { DeleteDepartmentDialog } from './delete-department-dialog';
+import type { OrgChartEmployee, OrgChartNode, OrgChartEmployeeNode, OrgChartDepartmentNode, OrgChartDepartment, OrgChartViewMode } from '@/types/org-chart';
+import { buildEmployeeTree, buildDepartmentTree, convertDepartmentToNode } from '@/lib/org-chart/tree-builder';
 import { Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -37,11 +39,12 @@ function getDepartmentColor(departmentId: string): string {
 }
 
 interface OrgChartProps {
-  selectedDepartmentId?: string | null;
+  viewMode: OrgChartViewMode;
 }
 
-export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
+export function OrgChart({ viewMode }: OrgChartProps) {
   const [employees, setEmployees] = useState<OrgChartEmployee[]>([]);
+  const [departments, setDepartments] = useState<OrgChartDepartment[]>([]);
   const [organizationName, setOrganizationName] = useState<string>('Organization');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,50 +52,61 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
   const [selectedEmployee, setSelectedEmployee] = useState<OrgChartEmployee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Department action states
+  const [addDepartmentDialog, setAddDepartmentDialog] = useState<{
+    open: boolean;
+    parentDepartment: { id: string; name: string } | null;
+  }>({ open: false, parentDepartment: null });
+
+  const [deleteDepartmentDialog, setDeleteDepartmentDialog] = useState<{
+    open: boolean;
+    department: { id: string; name: string; employeeCount: number; subdepartmentCount: number } | null;
+  }>({ open: false, department: null });
+
   // Refs for tracking node positions and transform state
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Track previous department filter to detect changes
-  const prevDepartmentIdRef = useRef<string | null | undefined>(selectedDepartmentId);
-
-  // Fetch employees from API
+  // Fetch data based on view mode
   useEffect(() => {
-    async function fetchEmployees() {
+    async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/org-chart');
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch organizational chart data');
-        }
-
-        const data = await response.json();
-        setOrganizationName(data.organizationName || 'Organization');
-        setEmployees(data.employees);
-
-        // Build grouped tree to set initial expanded state
-        const tree = buildGroupedEmployeeTree(data.employees);
-        const initialExpanded = new Set<string>();
-
-        // Auto-expand all department nodes and their top-level employees
-        tree.forEach((node) => {
-          if (node.nodeType === 'department') {
-            // Expand the department node
-            initialExpanded.add(node.id);
-
-            // Auto-expand all top-level employees in this department
-            node.directReports?.forEach((employeeNode) => {
-              if (employeeNode.nodeType === 'employee') {
-                initialExpanded.add(employeeNode.id);
-              }
-            });
+        if (viewMode === 'employee') {
+          // Fetch employee data
+          const response = await fetch('/api/org-chart');
+          if (!response.ok) {
+            throw new Error('Failed to fetch employee data');
           }
-        });
+          const data = await response.json();
+          setOrganizationName(data.organizationName || 'Organization');
+          setEmployees(data.employees);
 
-        setExpandedNodes(initialExpanded);
+          // Build tree and set initial expanded state
+          const tree = buildEmployeeTree(data.employees);
+          const initialExpanded = new Set<string>();
+          // Auto-expand top-level employees
+          tree.forEach((emp) => initialExpanded.add(emp.id));
+          setExpandedNodes(initialExpanded);
+        } else {
+          // Fetch department data
+          const response = await fetch('/api/departments-hierarchy');
+          if (!response.ok) {
+            throw new Error('Failed to fetch department data');
+          }
+          const data = await response.json();
+          setOrganizationName(data.organizationName || 'Organization');
+
+          // Build tree and set initial expanded state
+          const tree = buildDepartmentTree(data.departments);
+          setDepartments(tree);
+          const initialExpanded = new Set<string>();
+          // Auto-expand root departments
+          tree.forEach((dept) => initialExpanded.add(dept.id));
+          setExpandedNodes(initialExpanded);
+        }
       } catch (err) {
         console.error('Error fetching org chart data:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -101,30 +115,9 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
       }
     }
 
-    fetchEmployees();
-  }, []);
+    fetchData();
+  }, [viewMode]);
 
-  // Recenter view when department filter changes
-  useEffect(() => {
-    // Check if the department filter actually changed
-    if (prevDepartmentIdRef.current !== selectedDepartmentId && transformRef.current) {
-      // Use requestAnimationFrame to ensure the DOM has updated with the filtered tree
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Reset transform to initial state and recenter content
-          transformRef.current?.resetTransform();
-          // Additional centering call to ensure proper centering with new content size
-          requestAnimationFrame(() => {
-            if (transformRef.current?.instance) {
-              transformRef.current.centerView(0.8, 200);
-            }
-          });
-        });
-      });
-    }
-    // Update the ref to track the current value
-    prevDepartmentIdRef.current = selectedDepartmentId;
-  }, [selectedDepartmentId]);
 
   // Handle node expand/collapse with centering
   const handleToggleExpand = useCallback((employeeId: string) => {
@@ -216,6 +209,78 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
     setDialogOpen(true);
   };
 
+  // Refetch data after mutations
+  const refetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (viewMode === 'employee') {
+        const response = await fetch('/api/org-chart');
+        if (!response.ok) {
+          throw new Error('Failed to fetch employee data');
+        }
+        const data = await response.json();
+        setOrganizationName(data.organizationName || 'Organization');
+        setEmployees(data.employees);
+
+        const tree = buildEmployeeTree(data.employees);
+        const initialExpanded = new Set<string>();
+        tree.forEach((emp) => initialExpanded.add(emp.id));
+        setExpandedNodes(initialExpanded);
+      } else {
+        const response = await fetch('/api/departments-hierarchy');
+        if (!response.ok) {
+          throw new Error('Failed to fetch department data');
+        }
+        const data = await response.json();
+        setOrganizationName(data.organizationName || 'Organization');
+
+        const tree = buildDepartmentTree(data.departments);
+        setDepartments(tree);
+        const initialExpanded = new Set<string>();
+        tree.forEach((dept) => initialExpanded.add(dept.id));
+        setExpandedNodes(initialExpanded);
+      }
+    } catch (err) {
+      console.error('Error refetching org chart data:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, [viewMode]);
+
+  // Handle add child department
+  const handleAddChild = useCallback((departmentId: string, departmentName: string) => {
+    setAddDepartmentDialog({
+      open: true,
+      parentDepartment: { id: departmentId, name: departmentName },
+    });
+  }, []);
+
+  // Handle delete department
+  const handleDeleteDepartment = useCallback((
+    departmentId: string,
+    departmentName: string,
+    employeeCount: number,
+    subdepartmentCount: number
+  ) => {
+    setDeleteDepartmentDialog({
+      open: true,
+      department: { id: departmentId, name: departmentName, employeeCount, subdepartmentCount },
+    });
+  }, []);
+
+  // Handle successful department creation
+  const handleDepartmentCreated = useCallback(() => {
+    refetchData();
+  }, [refetchData]);
+
+  // Handle successful department deletion
+  const handleDepartmentDeleted = useCallback(() => {
+    refetchData();
+  }, [refetchData]);
+
   // Recursive function to render tree nodes (handles both department and employee nodes)
   const renderTreeNode = (node: OrgChartNode): React.ReactNode => {
     const hasChildren = Boolean(node.directReports && node.directReports.length > 0);
@@ -238,11 +303,16 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
           }}
         >
           <DepartmentNode
+            departmentId={node.departmentId}
             departmentName={node.departmentName}
             employeeCount={node.employeeCount}
+            subdepartmentCount={node.subdepartmentCount}
             departmentColor={departmentColor}
             isExpanded={isExpanded}
             onToggleExpand={() => handleToggleExpand(node.id)}
+            onAddChild={handleAddChild}
+            onDelete={handleDeleteDepartment}
+            viewMode={viewMode}
           />
         </div>
       );
@@ -312,13 +382,17 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
     );
   }
 
-  // Filter employees by selected department if applicable
-  const filteredEmployees = selectedDepartmentId
-    ? employees.filter((emp) => emp.departmentId === selectedDepartmentId)
-    : employees;
+  // Helper to recursively convert employees to employee nodes
+  const convertToEmployeeNode = (emp: OrgChartEmployee): OrgChartEmployeeNode => ({
+    ...emp,
+    nodeType: 'employee',
+    directReports: emp.directReports?.map(convertToEmployeeNode),
+  });
 
-  // Build grouped tree structure
-  const tree = buildGroupedEmployeeTree(filteredEmployees);
+  // Build tree based on view mode
+  const tree: OrgChartNode[] = viewMode === 'employee'
+    ? buildEmployeeTree(employees).map(convertToEmployeeNode)
+    : departments.map(convertDepartmentToNode);
 
   // Empty state
   if (tree.length === 0) {
@@ -326,9 +400,9 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground">
-            {selectedDepartmentId
-              ? 'No active employees found in this department'
-              : 'No active employees found'}
+            {viewMode === 'employee'
+              ? 'No active employees found'
+              : 'No departments found'}
           </p>
         </div>
       </div>
@@ -423,6 +497,26 @@ export function OrgChart({ selectedDepartmentId }: OrgChartProps) {
         employee={selectedEmployee}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      {/* Add Department Dialog */}
+      <AddDepartmentDialog
+        open={addDepartmentDialog.open}
+        onOpenChange={(open) =>
+          setAddDepartmentDialog((prev) => ({ ...prev, open }))
+        }
+        parentDepartment={addDepartmentDialog.parentDepartment}
+        onSuccess={handleDepartmentCreated}
+      />
+
+      {/* Delete Department Dialog */}
+      <DeleteDepartmentDialog
+        open={deleteDepartmentDialog.open}
+        onOpenChange={(open) =>
+          setDeleteDepartmentDialog((prev) => ({ ...prev, open }))
+        }
+        department={deleteDepartmentDialog.department}
+        onSuccess={handleDepartmentDeleted}
       />
     </>
   );

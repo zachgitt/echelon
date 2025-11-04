@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, parentDepartmentId } = body;
 
     // Validate required fields
     if (!name) {
@@ -73,12 +73,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If parentDepartmentId is provided, validate it exists and belongs to the organization
+    if (parentDepartmentId) {
+      const { eq, and } = await import('drizzle-orm');
+      const [parentDept] = await db
+        .select()
+        .from(departments)
+        .where(
+          and(
+            eq(departments.id, parentDepartmentId),
+            eq(departments.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!parentDept) {
+        return NextResponse.json(
+          { error: 'Parent department not found or does not belong to your organization' },
+          { status: 404 }
+        );
+      }
+    }
+
     // Create department
     const [newDept] = await db
       .insert(departments)
       .values({
         name,
         description: description || null,
+        parentDepartmentId: parentDepartmentId || null,
         organizationId,
       })
       .returning();

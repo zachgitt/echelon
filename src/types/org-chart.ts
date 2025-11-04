@@ -43,5 +43,20 @@ export interface OrgChartDepartmentNode {
   departmentId: string;
   departmentName: string;
   employeeCount: number;
+  subdepartmentCount?: number; // Number of child departments
   directReports?: OrgChartNode[];
 }
+
+// Department hierarchy types
+export interface OrgChartDepartment {
+  id: string;
+  name: string;
+  description: string | null;
+  parentDepartmentId: string | null;
+  employeeCount: number; // Direct employees in this department
+  totalEmployeeCount: number; // Including subdepartments
+  subdepartments?: OrgChartDepartment[];
+}
+
+// View mode type
+export type OrgChartViewMode = 'employee' | 'department';
