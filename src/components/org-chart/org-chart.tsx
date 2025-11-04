@@ -307,6 +307,7 @@ export function OrgChart({ viewMode }: OrgChartProps) {
             departmentName={node.departmentName}
             employeeCount={node.employeeCount}
             subdepartmentCount={node.subdepartmentCount}
+            departmentLead={node.departmentLead}
             departmentColor={departmentColor}
             isExpanded={isExpanded}
             onToggleExpand={() => handleToggleExpand(node.id)}

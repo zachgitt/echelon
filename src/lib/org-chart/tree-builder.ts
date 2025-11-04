@@ -207,6 +207,13 @@ export function buildDepartmentTree(
     name: string;
     description: string | null;
     parentDepartmentId: string | null;
+    departmentLeadId?: string | null;
+    departmentLead?: {
+      id: string;
+      name: string;
+      title: string;
+      email: string;
+    } | null;
     employeeCount: number;
   }>
 ): OrgChartDepartment[] {
@@ -217,6 +224,8 @@ export function buildDepartmentTree(
   departments.forEach((dept) => {
     deptMap.set(dept.id, {
       ...dept,
+      departmentLeadId: dept.departmentLeadId,
+      departmentLead: dept.departmentLead,
       totalEmployeeCount: dept.employeeCount,
       subdepartments: [],
     });
@@ -287,6 +296,7 @@ export function convertDepartmentToNode(
     departmentName: dept.name,
     employeeCount: dept.totalEmployeeCount,
     subdepartmentCount: dept.subdepartments?.length || 0,
+    departmentLead: dept.departmentLead,
     directReports: dept.subdepartments?.map(convertDepartmentToNode),
   };
 }

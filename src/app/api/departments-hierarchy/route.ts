@@ -9,15 +9,23 @@ export async function GET() {
     // Get authenticated user's organization
     const { organizationId } = await getAuthenticatedUser();
 
-    // Fetch all departments for this organization
+    // Fetch all departments for this organization with department lead info
     const depts = await db
       .select({
         id: departments.id,
         name: departments.name,
         description: departments.description,
         parentDepartmentId: departments.parentDepartmentId,
+        departmentLeadId: departments.departmentLeadId,
+        departmentLead: {
+          id: employees.id,
+          name: employees.name,
+          title: employees.title,
+          email: employees.email,
+        },
       })
       .from(departments)
+      .leftJoin(employees, eq(departments.departmentLeadId, employees.id))
       .where(eq(departments.organizationId, organizationId))
       .orderBy(departments.name);
 
@@ -43,7 +51,17 @@ export async function GET() {
 
     // Add employee counts to departments
     const departmentsWithCounts = depts.map((dept) => ({
-      ...dept,
+      id: dept.id,
+      name: dept.name,
+      description: dept.description,
+      parentDepartmentId: dept.parentDepartmentId,
+      departmentLeadId: dept.departmentLeadId,
+      departmentLead: dept.departmentLead?.id ? {
+        id: dept.departmentLead.id,
+        name: dept.departmentLead.name,
+        title: dept.departmentLead.title,
+        email: dept.departmentLead.email,
+      } : null,
       employeeCount: countMap.get(dept.id) || 0,
     }));
 

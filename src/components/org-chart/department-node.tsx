@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { Building2, Users, ChevronDown, ChevronUp, Plus, Trash2, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DepartmentNodeProps {
@@ -11,6 +11,12 @@ interface DepartmentNodeProps {
   departmentName: string;
   employeeCount: number;
   subdepartmentCount?: number;
+  departmentLead?: {
+    id: string;
+    name: string;
+    title: string;
+    email: string;
+  } | null;
   departmentColor?: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -24,6 +30,7 @@ export function DepartmentNode({
   departmentName,
   employeeCount,
   subdepartmentCount,
+  departmentLead,
   departmentColor = 'border-blue-500',
   isExpanded,
   onToggleExpand,
@@ -91,6 +98,21 @@ export function DepartmentNode({
             </div>
           )}
         </div>
+
+        {/* Department Lead */}
+        {departmentLead && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <UserCircle className="h-4 w-4 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-foreground truncate">
+                {departmentLead.name}
+              </div>
+              <div className="text-xs truncate">
+                {departmentLead.title}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Badges */}
         <div className="flex items-center gap-2 flex-wrap">
