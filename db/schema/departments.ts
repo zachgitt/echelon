@@ -6,6 +6,11 @@ export const departments = pgTable('departments', {
   name: text('name').notNull(),
   description: text('description'),
 
+  // Self-referential parent department relationship (nullable for root departments)
+  parentDepartmentId: uuid('parent_department_id').references((): any => departments.id, {
+    onDelete: 'set null'
+  }),
+
   // Link to organization
   organizationId: uuid('organization_id')
     .notNull()
